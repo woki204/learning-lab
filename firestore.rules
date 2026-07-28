@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// כללי האבטחה של Firestore.
+// העתק את התוכן הזה ל-Firebase Console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profile().role == 'admin';
+    }
+
+    // פרופילי משתמשים — רק המנהל מנהל אותם.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['mustChangePassword', 'passwordChangedAt', 'displayName']));
+    }
+
+    // סביבות למידה — קריאה ציבורית רק אחרי פרסום (זה מה שמאפשר
+    // ללומדים להיכנס דרך הקישור בלי חשבון). כתיבה — לבעלים בלבד.
+    match /courses/{courseId} {
+      allow read: if resource.data.published == true
+        || (signedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin()));
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      allow update, delete: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid || isAdmin());
+    }
+  }
+}
