@@ -22,6 +22,20 @@ const FRAMES = {
   body: { x: 70, y: 240, w: 860, h: 170 },
   caption: { x: 70, y: 430, w: 860, h: 56 },
   question: { x: 70, y: 120, w: 860, h: 330 },
+  image: { x: 300, y: 130, w: 400, h: 300 },
+}
+
+/**
+ * מסגרת לתמונה שנגררה לבמה: ממורכזת על נקודת השחרור ושומרת על
+ * יחס הצדדים המקורי, בלי לחרוג מגבולות השקופית.
+ */
+export function frameForImage(dropX, dropY, imgW, imgH) {
+  const maxW = CANVAS_W * 0.5
+  const maxH = CANVAS_H * 0.6
+  const k = Math.min(maxW / imgW, maxH / imgH, 1)
+  const w = Math.max(MIN_W, imgW * k)
+  const h = Math.max(MIN_H, imgH * k)
+  return clampFrame({ x: dropX - w / 2, y: dropY - h / 2, w, h })
 }
 
 /**

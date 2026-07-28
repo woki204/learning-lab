@@ -474,6 +474,162 @@ textarea {
   z-index: 3;
 }
 
+/* ───────── תמונות ───────── */
+.image-block {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+}
+.image-missing {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  border: 1px dashed var(--line);
+  border-radius: inherit;
+}
+.image-missing span:first-child {
+  font-size: 28px;
+}
+
+/* ───────── מאגר התמונות הצדי ───────── */
+.media-tab {
+  position: fixed;
+  top: 190px;
+  inset-inline-end: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-inline-end: 0;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  writing-mode: vertical-rl;
+}
+.media-tab:hover {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+.media-tab span {
+  writing-mode: vertical-rl;
+}
+
+.media-panel {
+  position: fixed;
+  top: 160px;
+  bottom: calc(var(--nav-h) + 20px);
+  inset-inline-end: 12px;
+  width: 250px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.media-panel > header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+.media-panel > header .spacer {
+  flex: 1;
+}
+.media-actions {
+  padding: 10px 12px;
+}
+.media-actions .btn {
+  width: 100%;
+}
+.media-panel .alert {
+  margin: 0 12px 10px;
+}
+.media-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px 12px;
+  align-content: start;
+}
+.media-item {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: grab;
+}
+.media-item:active {
+  cursor: grabbing;
+}
+.media-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.media-item:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-sm);
+}
+.media-del {
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 3px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 26, 40, 0.62);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.13s;
+}
+.media-item:hover .media-del {
+  opacity: 1;
+}
+.media-hint {
+  margin: 0;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+@media (max-width: 900px) {
+  .media-panel {
+    width: 200px;
+  }
+}
+
 .canvas-hint {
   max-width: 1000px;
   margin: 12px auto 0;

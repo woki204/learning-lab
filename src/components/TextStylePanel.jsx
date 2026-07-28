@@ -3,11 +3,13 @@ import {
   FONTS,
   BORDER_STYLES,
   ALIGNMENTS,
+  DIRECTIONS,
   VARIANTS,
   variantList,
   defaultStyle,
   defaultBox,
 } from '../lib/typography'
+import { AlignIcon, DirIcon } from './icons'
 
 /**
  * לוח העיצוב של תיבת טקסט — גופן, צבע, הדגשות, יישור, ועיצוב התיבה עצמה.
@@ -124,9 +126,37 @@ export default function TextStylePanel({ block, onChange, inRibbon = false }) {
               type="button"
               className={'chip sq' + (style.align === a.value ? ' active' : '')}
               onClick={() => setStyle({ align: a.value })}
-              title={`יישור ל${a.label}`}
+              title={a.label}
+              aria-label={a.label}
             >
-              {a.icon}
+              <AlignIcon type={a.value} />
+            </button>
+          ))}
+        </div>
+
+        <div className="chips">
+          {DIRECTIONS.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              className={'chip sq' + (style.direction === d.value ? ' active' : '')}
+              onClick={() =>
+                // החלפת כיוון גוררת גם את היישור הטבעי של אותו כיוון,
+                // אלא אם המשתמש בחר מרכוז או יישור דו-צדדי במפורש
+                setStyle({
+                  direction: d.value,
+                  align:
+                    style.align === 'center' || style.align === 'justify'
+                      ? style.align
+                      : d.value === 'rtl'
+                        ? 'right'
+                        : 'left',
+                })
+              }
+              title={`כיוון כתיבה — ${d.label}`}
+              aria-label={`כיוון כתיבה — ${d.label}`}
+            >
+              <DirIcon dir={d.value} />
             </button>
           ))}
         </div>

@@ -28,6 +28,7 @@ export const isFirebaseConfigured = !firebaseConfig.apiKey.startsWith('PASTE_')
 export const USERS_COL = 'll_users'
 export const COURSES_COL = 'll_courses'
 export const META_COL = 'll_meta'
+export const MEDIA_COL = 'll_media'
 
 // מסמך נעילה חד-פעמי: קיומו מעיד שמנהל המערכת הראשון כבר נוצר,
 // וחוסם את עמוד ההקמה מלרוץ שוב.

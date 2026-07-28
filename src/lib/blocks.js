@@ -33,6 +33,20 @@ export const BLOCK_TYPES = {
     }),
   },
 
+  image: {
+    label: 'תמונה',
+    icon: '🖼',
+    gradable: false,
+    create: (mediaId = null) => ({
+      id: newId(),
+      type: 'image',
+      mediaId,
+      fit: 'contain', // contain = התמונה נכנסת שלמה, cover = ממלאת וחותכת
+      box: { ...defaultBox(), radius: 8 },
+      alt: '',
+    }),
+  },
+
   question: {
     label: 'שאלה אמריקאית',
     icon: '❓',

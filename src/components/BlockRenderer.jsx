@@ -1,4 +1,26 @@
 import { textCss, normalizeTextBlock } from '../lib/typography'
+import { useMedia } from '../lib/mediaContext'
+
+function ImageBlock({ block }) {
+  const media = useMedia()
+  const item = media[block.mediaId]
+  if (!item)
+    return (
+      <div className="image-missing">
+        <span>🖼</span>
+        <span className="tiny">התמונה לא נמצאה</span>
+      </div>
+    )
+  return (
+    <img
+      className="image-block"
+      src={item.dataUrl}
+      alt={block.alt || item.name || ''}
+      style={{ objectFit: block.fit ?? 'contain' }}
+      draggable={false}
+    />
+  )
+}
 
 /**
  * מציג את תוכן הרכיב בלבד — בלי מסגרת, מילוי או מיקום.
@@ -17,6 +39,8 @@ export default function BlockRenderer({ block, answer, onAnswer, showKey = false
       </Tag>
     )
   }
+
+  if (block.type === 'image') return <ImageBlock block={block} />
 
   if (block.type === 'question') {
     return (

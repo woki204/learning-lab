@@ -42,10 +42,15 @@ export const BORDER_STYLES = [
 ]
 
 export const ALIGNMENTS = [
-  { value: 'right', label: 'ימין', icon: '⯈' },
-  { value: 'center', label: 'מרכז', icon: '≡' },
-  { value: 'left', label: 'שמאל', icon: '⯇' },
-  { value: 'justify', label: 'מיושר', icon: '☰' },
+  { value: 'right', label: 'יישור לימין' },
+  { value: 'center', label: 'מרכוז' },
+  { value: 'left', label: 'יישור לשמאל' },
+  { value: 'justify', label: 'יישור לשני הצדדים' },
+]
+
+export const DIRECTIONS = [
+  { value: 'rtl', label: 'מימין לשמאל (עברית)' },
+  { value: 'ltr', label: 'משמאל לימין (אנגלית)' },
 ]
 
 export const defaultStyle = (variant = 'body') => ({
@@ -56,6 +61,7 @@ export const defaultStyle = (variant = 'body') => ({
   italic: false,
   underline: false,
   align: 'right',
+  direction: 'rtl',
   lineHeight: 1.6,
 })
 
@@ -81,6 +87,10 @@ export function textCss(style = {}) {
     fontStyle: s.italic ? 'italic' : 'normal',
     textDecoration: s.underline ? 'underline' : 'none',
     textAlign: s.align,
+    direction: s.direction,
+    // unicode-bidi מבודד את הפסקה כדי שסימני פיסוק ומספרים
+    // ייפלו בצד הנכון כשמערבבים עברית ואנגלית
+    unicodeBidi: 'isolate',
     lineHeight: s.lineHeight,
   }
 }

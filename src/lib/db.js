@@ -10,9 +10,10 @@ import {
   query,
   where,
   orderBy,
+  documentId,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db, USERS_COL, COURSES_COL } from './firebase'
+import { db, USERS_COL, COURSES_COL, MEDIA_COL } from './firebase'
 import { createCourse } from './blocks'
 
 const coursesRef = collection(db, COURSES_COL)
@@ -50,6 +51,49 @@ export async function saveCourse(id, data) {
 }
 
 export const removeCourse = (id) => deleteDoc(doc(db, COURSES_COL, id))
+
+// ───────────── מאגר התמונות ─────────────
+
+const mediaRef = collection(db, MEDIA_COL)
+
+export async function listMedia(ownerUid) {
+  const snap = await getDocs(query(mediaRef, where('ownerUid', '==', ownerUid)))
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+}
+
+export async function addMedia(ownerUid, image) {
+  const ref = await addDoc(mediaRef, {
+    ownerUid,
+    name: image.name,
+    dataUrl: image.dataUrl,
+    w: image.w,
+    h: image.h,
+    bytes: image.bytes,
+    createdAt: serverTimestamp(),
+  })
+  return { id: ref.id, ownerUid, ...image }
+}
+
+export const removeMedia = (id) => deleteDoc(doc(db, MEDIA_COL, id))
+
+/**
+ * שולף תמונות לפי מזהים — עבור מצב לומד, שטוען רק את מה שבשימוש.
+ * Firestore מגביל שאילתת documentId ל-30 ערכים, ולכן מפוצל למנות.
+ */
+export async function getMediaByIds(ids) {
+  const unique = [...new Set(ids.filter(Boolean))]
+  const map = {}
+  for (let i = 0; i < unique.length; i += 30) {
+    const chunk = unique.slice(i, i + 30)
+    const snap = await getDocs(query(mediaRef, where(documentId(), 'in', chunk)))
+    snap.docs.forEach((d) => {
+      map[d.id] = { id: d.id, ...d.data() }
+    })
+  }
+  return map
+}
 
 // ───────────── ניהול משתמשים ─────────────
 

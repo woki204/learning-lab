@@ -9,7 +9,12 @@ import { CANVAS_W, CANVAS_H } from '../lib/canvas'
  * הבמה מוגדרת ltr בכוונה: כך left/top של הרכיבים מתנהגים באופן
  * זהה בלי קשר לכיוון הדף. הטקסט בתוך הרכיבים נשאר rtl.
  */
-export default function SlideCanvas({ children, onBackgroundPointerDown, className = '' }) {
+export default function SlideCanvas({
+  children,
+  onBackgroundPointerDown,
+  onCanvasDrop,
+  className = '',
+}) {
   const outerRef = useRef(null)
   const [scale, setScale] = useState(0)
 
@@ -47,6 +52,17 @@ export default function SlideCanvas({ children, onBackgroundPointerDown, classNa
             transform: `scale(${scale})`,
           }}
           onPointerDown={onBackgroundPointerDown}
+          onDragOver={onCanvasDrop ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } : undefined}
+          onDrop={
+            onCanvasDrop
+              ? (e) => {
+                  e.preventDefault()
+                  // המרת נקודת השחרור מפיקסלים של המסך ליחידות הבמה
+                  const r = e.currentTarget.getBoundingClientRect()
+                  onCanvasDrop(e, (e.clientX - r.left) / scale, (e.clientY - r.top) / scale)
+                }
+              : undefined
+          }
         >
           {typeof children === 'function' ? children(scale) : children}
         </div>

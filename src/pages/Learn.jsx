@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCourse } from '../lib/db'
+import { getCourse, getMediaByIds } from '../lib/db'
+import { MediaProvider, collectMediaIds } from '../lib/mediaContext'
 import { gradeCourse } from '../lib/blocks'
 import SlideNav from '../components/SlideNav'
 import SlideCanvas from '../components/SlideCanvas'
@@ -16,6 +17,7 @@ import { ensureFrame } from '../lib/canvas'
 export default function Learn() {
   const { id } = useParams()
   const [course, setCourse] = useState(null)
+  const [media, setMedia] = useState({})
   const [error, setError] = useState('')
 
   const [stage, setStage] = useState('intro') // intro → run → done
@@ -26,9 +28,12 @@ export default function Learn() {
 
   useEffect(() => {
     getCourse(id)
-      .then((c) => {
+      .then(async (c) => {
         if (!c) return setError('הסביבה המבוקשת לא נמצאה. בדוק את הקישור מול המרצה.')
         if (!c.published) return setError('הסביבה הזו עדיין לא פורסמה על ידי המרצה.')
+        // התמונות נטענות פעם אחת מראש, כדי שמעבר בין שלבים יהיה מיידי
+        const ids = collectMediaIds(c)
+        if (ids.length) setMedia(await getMediaByIds(ids).catch(() => ({})))
         setCourse(c)
       })
       .catch(() => setError('לא ניתן לטעון את הסביבה. נסה שוב מאוחר יותר.'))
@@ -96,6 +101,7 @@ export default function Learn() {
   const isLast = index === course.slides.length - 1
 
   return (
+    <MediaProvider value={media}>
     <div className="stage">
       <div className="stage-bar">
         <span className="title">{course.title}</span>
@@ -131,5 +137,6 @@ export default function Learn() {
         visited={visited}
       />
     </div>
+    </MediaProvider>
   )
 }

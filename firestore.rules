@@ -49,7 +49,18 @@ match /ll_users/{uid} {
              .hasOnly(['mustChangePassword', 'passwordChangedAt', 'displayName']));
 }
 
-// ── 3. סביבות הלמידה ─────────────────────────────────────────
+// ── 3. מאגר התמונות ──────────────────────────────────────────
+// קריאה ציבורית, כי לומדים רואים תמונות בלי חשבון.
+// כתיבה ומחיקה — רק הבעלים.
+
+match /ll_media/{mediaId} {
+  allow read: if true;
+  allow create: if llSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+  allow update, delete: if llSignedIn()
+    && (resource.data.ownerUid == request.auth.uid || llIsAdmin());
+}
+
+// ── 4. סביבות הלמידה ─────────────────────────────────────────
 // קריאה ציבורית רק אחרי פרסום — זה מה שמאפשר ללומדים להיכנס
 // דרך הקישור בלי חשבון. כתיבה — לבעלים או למנהל בלבד.
 

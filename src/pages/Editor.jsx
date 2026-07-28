@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getCourse, saveCourse } from '../lib/db'
-import { createSlide } from '../lib/blocks'
-import { ensureFrame, clampFrame } from '../lib/canvas'
+import { getCourse, saveCourse, listMedia } from '../lib/db'
+import { createSlide, BLOCK_TYPES } from '../lib/blocks'
+import { ensureFrame, clampFrame, frameForImage } from '../lib/canvas'
+import { useAuth } from '../lib/auth'
+import { MediaProvider } from '../lib/mediaContext'
+import MediaLibrary from '../components/MediaLibrary'
 import { learnLink } from '../lib/links'
 import SlideNav from '../components/SlideNav'
 import SlideCanvas from '../components/SlideCanvas'
@@ -20,6 +23,7 @@ const MODES = [
 export default function Editor() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { profile } = useAuth()
 
   const [course, setCourse] = useState(null)
   const [mode, setMode] = useState('edit')
@@ -31,6 +35,8 @@ export default function Editor() {
   const [error, setError] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [contentOpen, setContentOpen] = useState(false)
+  const [media, setMedia] = useState([])
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [answers, setAnswers] = useState({})
   const scaleRef = useRef(1)
 
@@ -47,6 +53,10 @@ export default function Editor() {
       })
       .catch((e) => setError(e.message))
   }, [id])
+
+  useEffect(() => {
+    if (profile?.id) listMedia(profile.id).then(setMedia).catch(() => {})
+  }, [profile?.id])
 
   useEffect(() => {
     const handler = (e) => {
@@ -193,6 +203,20 @@ export default function Editor() {
     patchSlide(index, (s) => ({ ...s, blocks: [...s.blocks, copy] }))
     setSelectedId(copy.id)
   }
+  /** שחרור תמונה מהמאגר על הבמה — יוצר רכיב תמונה במקום השחרור */
+  const dropMedia = (e, canvasX, canvasY) => {
+    const mediaId = e.dataTransfer.getData('application/x-ll-media')
+    if (!mediaId) return
+    const item = media.find((m) => m.id === mediaId)
+    if (!item) return
+    const block = {
+      ...BLOCK_TYPES.image.create(mediaId),
+      frame: frameForImage(canvasX, canvasY, item.w, item.h),
+    }
+    patchSlide(index, (s) => ({ ...s, blocks: [...(s.blocks ?? []), block] }))
+    setSelectedId(block.id)
+  }
+
   // סדר המערך הוא סדר הערימה: אחרון = עליון
   const restack = (bid, dir) =>
     patchSlide(index, (s) => {
@@ -206,8 +230,10 @@ export default function Editor() {
     })
 
   const isEditMode = mode === 'edit'
+  const mediaMap = Object.fromEntries(media.map((m) => [m.id, m]))
 
   return (
+    <MediaProvider value={mediaMap}>
     <div className="stage">
       <div className="stage-bar">
         <button
@@ -284,12 +310,23 @@ export default function Editor() {
       )}
 
       <div className="stage-body">
+        {isEditMode && profile && (
+          <MediaLibrary
+            ownerUid={profile.id}
+            media={media}
+            setMedia={setMedia}
+            open={libraryOpen}
+            onToggle={() => setLibraryOpen((v) => !v)}
+          />
+        )}
+
         <SlideCanvas
           className={isEditMode ? 'editable' : ''}
           onBackgroundPointerDown={() => {
             setSelectedId(null)
             setEditingId(null)
           }}
+          onCanvasDrop={isEditMode ? dropMedia : undefined}
         >
           {(scale) => {
             scaleRef.current = scale
@@ -369,6 +406,7 @@ export default function Editor() {
         />
       )}
     </div>
+    </MediaProvider>
   )
 }
 
