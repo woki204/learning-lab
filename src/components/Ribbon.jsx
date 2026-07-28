@@ -20,13 +20,74 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
     <div className="toolbar-row">
       {block.type === 'text' && <TextTools block={block} onChange={onChange} />}
       {block.type === 'image' && <ImageTools block={block} onChange={onChange} />}
+      {block.type === 'video' && <VideoTools block={block} onChange={onChange} />}
+      {block.type === 'check' && <CheckTools block={block} onChange={onChange} />}
+
       {block.type === 'question' && (
         <>
           <span className="tb-label">❓ שאלה</span>
-          <button className="btn sm" onClick={onEditContent}>✏️ ערוך שאלה ותשובות</button>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <select
+            className="tb-select"
+            style={{ width: 116 }}
+            value={block.display ?? 'list'}
+            onChange={(e) => onChange({ ...block, display: e.target.value })}
+            title="צורת התצוגה"
+          >
+            <option value="list">רשימה</option>
+            <option value="cards">כרטיסים</option>
+          </select>
+          {block.display === 'cards' && (
+            <label className="tb-inline">
+              עמודות
+              <input
+                className="tb-input num"
+                type="number"
+                min="1"
+                max="4"
+                value={block.columns ?? 2}
+                onChange={(e) => onChange({ ...block, columns: Number(e.target.value) || 2 })}
+              />
+            </label>
+          )}
+          <span className="tiny muted">{block.options?.length ?? 0} תשובות · {block.points ?? 1} נק'</span>
+        </>
+      )}
+
+      {block.type === 'multi' && (
+        <>
+          <span className="tb-label">☑️ בחירה מרובה</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <label className="tb-inline">
+            עמודות
+            <input
+              className="tb-input num"
+              type="number"
+              min="1"
+              max="3"
+              value={block.columns ?? 1}
+              onChange={(e) => onChange({ ...block, columns: Number(e.target.value) || 1 })}
+            />
+          </label>
+          <label className="tb-inline">
+            <input
+              type="checkbox"
+              checked={block.partial !== false}
+              onChange={(e) => onChange({ ...block, partial: e.target.checked })}
+            />
+            ניקוד חלקי
+          </label>
           <span className="tiny muted">
-            {block.options?.length ?? 0} תשובות · {block.points ?? 1} נק'
+            {block.options?.filter((o) => o.correct).length ?? 0} נכונות · {block.points ?? 1} נק'
           </span>
+        </>
+      )}
+
+      {block.type === 'cloze' && (
+        <>
+          <span className="tb-label">✍️ השלמת מילים</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תבנית</button>
+          <span className="tiny muted">{block.points ?? 1} נק'</span>
         </>
       )}
 
@@ -220,6 +281,57 @@ function ImageTools({ block, onChange }) {
         onChange={(e) => onChange({ ...block, alt: e.target.value })}
         title="תיאור התמונה לקוראי מסך"
       />
+    </>
+  )
+}
+
+function VideoTools({ block, onChange }) {
+  return (
+    <>
+      <span className="tb-label">🎬 וידאו</span>
+      <input
+        className="tb-input"
+        style={{ width: 320 }}
+        type="text"
+        value={block.url ?? ''}
+        placeholder="הדבק קישור: יוטיוב, Vimeo או קובץ וידאו"
+        onChange={(e) => onChange({ ...block, url: e.target.value })}
+      />
+      <BoxPopover block={block} onChange={onChange} />
+    </>
+  )
+}
+
+function CheckTools({ block, onChange }) {
+  return (
+    <>
+      <span className="tb-label">✅ כפתור בדיקה</span>
+      <input
+        className="tb-input"
+        style={{ width: 130 }}
+        type="text"
+        value={block.label ?? ''}
+        placeholder="בדיקה"
+        onChange={(e) => onChange({ ...block, label: e.target.value })}
+        title="הכיתוב על הכפתור"
+      />
+      <label className="tb-inline">
+        <input
+          type="checkbox"
+          checked={block.showScore !== false}
+          onChange={(e) => onChange({ ...block, showScore: e.target.checked })}
+        />
+        הצג ניקוד
+      </label>
+      <label className="tb-inline">
+        <input
+          type="checkbox"
+          checked={block.allowRetry !== false}
+          onChange={(e) => onChange({ ...block, allowRetry: e.target.checked })}
+        />
+        אפשר ניסיון נוסף
+      </label>
+      <span className="tiny muted">בודק את כל השאלות שבשלב הזה</span>
     </>
   )
 }

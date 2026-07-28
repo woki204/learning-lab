@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCourse, getMediaByIds } from '../lib/db'
 import { MediaProvider, collectMediaIds } from '../lib/mediaContext'
-import { gradeCourse } from '../lib/blocks'
+import { gradeCourse, gradeBlocks } from '../lib/blocks'
+import { RuntimeProvider } from '../lib/runtime'
 import SlideNav from '../components/SlideNav'
 import SlideCanvas from '../components/SlideCanvas'
 import StaticBlock from '../components/StaticBlock'
@@ -44,8 +45,12 @@ export default function Learn() {
     setVisited((v) => new Set(v).add(i))
   }
 
+  // אילו שלבים כבר נבדקו על ידי הלומד
+  const [checkedSlides, setCheckedSlides] = useState({})
+
   const restart = () => {
     setAnswers({})
+    setCheckedSlides({})
     setIndex(0)
     setVisited(new Set([0]))
     setStage('intro')
@@ -99,9 +104,30 @@ export default function Learn() {
   // ── מהלך הלמידה ──
   const slide = course.slides[index]
   const isLast = index === course.slides.length - 1
+  const blocks = slide.blocks ?? []
+
+  const runtime = {
+    answers,
+    setAnswer: (blockId, value) => setAnswers((a) => ({ ...a, [blockId]: value })),
+    checked: !!checkedSlides[index],
+    result: checkedSlides[index] ? gradeBlocks(blocks, answers) : null,
+    onCheck: () => setCheckedSlides((c) => ({ ...c, [index]: true })),
+    onReset: () => {
+      // ניקוי התשובות של השלב הזה בלבד, כדי שאפשר יהיה לנסות שוב
+      setAnswers((a) => {
+        const next = { ...a }
+        blocks.forEach((b) => delete next[b.id])
+        return next
+      })
+      setCheckedSlides((c) => ({ ...c, [index]: false }))
+    },
+    showKey: false,
+    interactive: true,
+  }
 
   return (
     <MediaProvider value={media}>
+    <RuntimeProvider value={runtime}>
     <div className="stage">
       <div className="stage-bar">
         <span className="title">{course.title}</span>
@@ -110,14 +136,12 @@ export default function Learn() {
       </div>
 
       <div className="stage-body">
-        <SlideCanvas>
-          {(slide.blocks ?? []).map((b) => (
-            <StaticBlock
-              key={b.id}
-              block={ensureFrame(b)}
-              answer={answers[b.id]}
-              onAnswer={(bid, val) => setAnswers((a) => ({ ...a, [bid]: val }))}
-            />
+        <SlideCanvas
+          background={slide.background}
+          backgroundImage={media[slide.background?.mediaId]?.dataUrl}
+        >
+          {blocks.map((b) => (
+            <StaticBlock key={b.id} block={ensureFrame(b)} />
           ))}
         </SlideCanvas>
 
@@ -137,6 +161,7 @@ export default function Learn() {
         visited={visited}
       />
     </div>
+    </RuntimeProvider>
     </MediaProvider>
   )
 }

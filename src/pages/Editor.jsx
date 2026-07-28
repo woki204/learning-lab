@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCourse, saveCourse, listMedia } from '../lib/db'
-import { createSlide, BLOCK_TYPES } from '../lib/blocks'
+import { createSlide, BLOCK_TYPES, gradeBlocks } from '../lib/blocks'
+import { RuntimeProvider } from '../lib/runtime'
 import { ensureFrame, clampFrame, frameForImage } from '../lib/canvas'
 import { useAuth } from '../lib/auth'
 import { MediaProvider } from '../lib/mediaContext'
@@ -13,7 +14,7 @@ import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
 import { ElementRibbon, DefaultRibbon } from '../components/Ribbon'
-import { SideRail, TextPanel, QuestionPanel, SlidesPanel } from '../components/SideRail'
+import { SideRail, TextPanel, QuestionPanel, MediaPanel, SlidesPanel } from '../components/SideRail'
 
 const MODES = [
   { key: 'edit', label: '✏️ עריכה' },
@@ -38,6 +39,7 @@ export default function Editor() {
   const [contentOpen, setContentOpen] = useState(false)
   const [media, setMedia] = useState([])
   const [railTab, setRailTab] = useState('text')
+  const [checked, setChecked] = useState(false)
   const [answers, setAnswers] = useState({})
   const scaleRef = useRef(1)
 
@@ -238,8 +240,24 @@ export default function Editor() {
   const isEditMode = mode === 'edit'
   const mediaMap = Object.fromEntries(media.map((m) => [m.id, m]))
 
+  // בעריכה הרכיבים מוצגים "כבויים"; בתצוגה ובלומד הם חיים
+  const runtime = {
+    answers,
+    setAnswer: (blockId, value) => setAnswers((a) => ({ ...a, [blockId]: value })),
+    checked,
+    result: checked ? gradeBlocks(blocks, answers) : null,
+    onCheck: () => setChecked(true),
+    onReset: () => {
+      setAnswers({})
+      setChecked(false)
+    },
+    showKey: mode === 'preview',
+    interactive: !isEditMode,
+  }
+
   return (
     <MediaProvider value={mediaMap}>
+    <RuntimeProvider value={runtime}>
     <div className="stage">
       <div className="stage-bar">
         <button
@@ -265,6 +283,8 @@ export default function Editor() {
                 setMode(m.key)
                 setSelectedId(null)
                 setEditingId(null)
+                setChecked(false)
+                setAnswers({})
               }}
             >
               {m.label}
@@ -309,6 +329,7 @@ export default function Editor() {
           <aside className="side-panel">
             {railTab === 'text' && <TextPanel onAdd={addBlock} />}
             {railTab === 'questions' && <QuestionPanel onAdd={addBlock} />}
+            {railTab === 'video' && <MediaPanel onAdd={addBlock} />}
             {railTab === 'images' && profile && (
               <MediaLibrary ownerUid={profile.id} media={media} setMedia={setMedia} />
             )}
@@ -316,12 +337,14 @@ export default function Editor() {
               <SlidesPanel
                 slides={course.slides}
                 index={index}
+                media={media}
                 onGo={goToSlide}
                 onAdd={addSlide}
                 onDuplicate={duplicateSlide}
                 onDelete={deleteSlide}
                 onMove={moveSlide}
                 onRename={(title) => patchSlide(index, { title })}
+                onBackground={(background) => patchSlide(index, { background })}
               />
             )}
           </aside>
@@ -330,6 +353,8 @@ export default function Editor() {
         <div className="stage-body">
         <SlideCanvas
           className={isEditMode ? 'editable' : ''}
+          background={slide.background}
+          backgroundImage={mediaMap[slide.background?.mediaId]?.dataUrl}
           onBackgroundPointerDown={() => {
             setSelectedId(null)
             setEditingId(null)
@@ -352,13 +377,7 @@ export default function Editor() {
                   onEndEdit={() => setEditingId(null)}
                 />
               ) : (
-                <StaticBlock
-                  key={b.id}
-                  block={b}
-                  answer={answers[b.id]}
-                  onAnswer={(bid, val) => setAnswers((a) => ({ ...a, [bid]: val }))}
-                  showKey={mode === 'preview'}
-                />
+                <StaticBlock key={b.id} block={b} />
               ),
             )
           }}
@@ -388,7 +407,7 @@ export default function Editor() {
       {contentOpen && selected && (
         <div className="modal-back" onClick={() => setContentOpen(false)}>
           <div className="modal wide" onClick={(e) => e.stopPropagation()}>
-            <h2>תוכן השאלה</h2>
+            <h2>תוכן הרכיב</h2>
             <BlockEditor
               block={selected}
               onChange={(nb) => updateBlockById(selected.id, nb)}
@@ -409,6 +428,7 @@ export default function Editor() {
         />
       )}
     </div>
+    </RuntimeProvider>
     </MediaProvider>
   )
 }

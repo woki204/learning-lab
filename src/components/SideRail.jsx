@@ -1,4 +1,4 @@
-import { INSERT_MENU } from '../lib/blocks'
+import { TEXT_INSERTS, QUESTION_INSERTS, MEDIA_INSERTS } from '../lib/blocks'
 import { VARIANTS } from '../lib/typography'
 
 /**
@@ -8,6 +8,7 @@ import { VARIANTS } from '../lib/typography'
 export const RAIL_TABS = [
   { key: 'text', icon: 'T', label: 'טקסט' },
   { key: 'images', icon: '🖼', label: 'תמונות' },
+  { key: 'video', icon: '🎬', label: 'וידאו' },
   { key: 'questions', icon: '❓', label: 'שאלות' },
   { key: 'slides', icon: '▦', label: 'שלבים' },
 ]
@@ -32,7 +33,7 @@ export function SideRail({ active, onSelect }) {
 
 /** פאנל הטקסט — לחיצה על רמה מוסיפה תיבה חדשה לשקופית */
 export function TextPanel({ onAdd }) {
-  const items = INSERT_MENU.filter((i) => i.key.startsWith('text:'))
+  const items = TEXT_INSERTS
   return (
     <>
       <div className="panel-head">
@@ -59,28 +60,66 @@ export function TextPanel({ onAdd }) {
   )
 }
 
-/** פאנל השאלות — כרגע סוג אחד, ייפתח לעוד סוגים בהמשך */
+/** פאנל השאלות — סוגי המשימות וכפתור הבדיקה */
 export function QuestionPanel({ onAdd }) {
-  const item = INSERT_MENU.find((i) => i.key === 'question')
   return (
     <>
       <div className="panel-head">
-        <strong>שאלות</strong>
+        <strong>שאלות ומשימות</strong>
       </div>
       <div className="panel-body">
-        <button className="text-preset" onClick={() => onAdd(item)}>
-          <span>❓ שאלה אמריקאית</span>
-        </button>
+        {QUESTION_INSERTS.map((item) => (
+          <button key={item.key} className="text-preset" onClick={() => onAdd(item)}>
+            <span>{item.label}</span>
+            <span className="ins-badge">{item.badge}</span>
+          </button>
+        ))}
       </div>
       <p className="panel-foot tiny muted">
-        שאלות נכללות אוטומטית בציון ובתעודה שהלומד מקבל בסוף.
+        השאלות נכללות אוטומטית בציון ובתעודה. הוסף <strong>כפתור בדיקה</strong> לשלב
+        כדי שהלומד יוכל לבדוק את עצמו כבר שם.
+      </p>
+    </>
+  )
+}
+
+/** פאנל המדיה שאינה תמונה */
+export function MediaPanel({ onAdd }) {
+  return (
+    <>
+      <div className="panel-head">
+        <strong>וידאו</strong>
+      </div>
+      <div className="panel-body">
+        {MEDIA_INSERTS.map((item) => (
+          <button key={item.key} className="text-preset" onClick={() => onAdd(item)}>
+            <span>{item.label}</span>
+            <span className="ins-badge">{item.badge}</span>
+          </button>
+        ))}
+      </div>
+      <p className="panel-foot tiny muted">
+        הוסף רכיב וידאו והדבק בסרגל קישור מיוטיוב, מ-Vimeo או לקובץ וידאו.
       </p>
     </>
   )
 }
 
 /** פאנל השלבים — סקירה, מעבר וסידור מחדש */
-export function SlidesPanel({ slides, index, onGo, onAdd, onDuplicate, onDelete, onMove, onRename }) {
+export function SlidesPanel({
+  slides,
+  index,
+  onGo,
+  onAdd,
+  onDuplicate,
+  onDelete,
+  onMove,
+  onRename,
+  onBackground,
+  media = [],
+}) {
+  const bg = slides[index]?.background ?? {}
+
   return (
     <>
       <div className="panel-head">
@@ -104,6 +143,55 @@ export function SlidesPanel({ slides, index, onGo, onAdd, onDuplicate, onDelete,
             </li>
           ))}
         </ol>
+
+        {/* רקע השלב הנוכחי */}
+        <div className="bg-section">
+          <strong className="tiny">רקע השלב</strong>
+
+          <label className="pop-row" style={{ padding: '6px 0' }}>
+            <span>צבע</span>
+            <input
+              type="color"
+              className="color-input"
+              value={bg.color ?? '#ffffff'}
+              onChange={(e) => onBackground({ ...bg, color: e.target.value })}
+            />
+          </label>
+
+          <div className="bg-grid">
+            <button
+              className={'bg-thumb none' + (!bg.mediaId ? ' active' : '')}
+              onClick={() => onBackground({ ...bg, mediaId: null })}
+              title="ללא תמונת רקע"
+            >
+              ✕
+            </button>
+            {media.map((m) => (
+              <button
+                key={m.id}
+                className={'bg-thumb' + (bg.mediaId === m.id ? ' active' : '')}
+                onClick={() => onBackground({ ...bg, mediaId: m.id })}
+                title={m.name}
+              >
+                <img src={m.dataUrl} alt="" />
+              </button>
+            ))}
+          </div>
+
+          {bg.mediaId && (
+            <label className="pop-row" style={{ padding: '6px 0' }}>
+              <span>התאמה</span>
+              <select
+                value={bg.fit ?? 'cover'}
+                onChange={(e) => onBackground({ ...bg, fit: e.target.value })}
+              >
+                <option value="cover">ממלאת</option>
+                <option value="contain">שלמה</option>
+                <option value="fill">נמתחת</option>
+              </select>
+            </label>
+          )}
+        </div>
       </div>
 
       <div className="panel-foot">

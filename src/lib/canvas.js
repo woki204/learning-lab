@@ -22,6 +22,10 @@ const FRAMES = {
   body: { x: 70, y: 240, w: 860, h: 170 },
   caption: { x: 70, y: 430, w: 860, h: 56 },
   question: { x: 70, y: 120, w: 860, h: 330 },
+  multi: { x: 70, y: 130, w: 860, h: 300 },
+  cloze: { x: 70, y: 150, w: 860, h: 230 },
+  check: { x: 70, y: 470, w: 860, h: 56 },
+  video: { x: 200, y: 90, w: 600, h: 338 },
   image: { x: 300, y: 130, w: 400, h: 300 },
 }
 

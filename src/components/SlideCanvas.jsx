@@ -13,6 +13,8 @@ export default function SlideCanvas({
   children,
   onBackgroundPointerDown,
   onCanvasDrop,
+  background,
+  backgroundImage,
   className = '',
 }) {
   const outerRef = useRef(null)
@@ -64,6 +66,17 @@ export default function SlideCanvas({
               : undefined
           }
         >
+          {/* רקע השקופית — צבע ומעליו תמונה, מתחת לכל הרכיבים */}
+          <div className="canvas-bg" style={{ background: background?.color || '#ffffff' }}>
+            {backgroundImage && (
+              <img
+                src={backgroundImage}
+                alt=""
+                draggable={false}
+                style={{ objectFit: background?.fit ?? 'cover' }}
+              />
+            )}
+          </div>
           {typeof children === 'function' ? children(scale) : children}
         </div>
       )}
