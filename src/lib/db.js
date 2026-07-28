@@ -12,10 +12,10 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, USERS_COL, COURSES_COL } from './firebase'
 import { createCourse } from './blocks'
 
-const coursesRef = collection(db, 'courses')
+const coursesRef = collection(db, COURSES_COL)
 
 export async function listCourses(ownerUid) {
   // ממיינים בצד הלקוח כדי לא לחייב אינדקס מורכב ב-Firestore
@@ -26,7 +26,7 @@ export async function listCourses(ownerUid) {
 }
 
 export async function getCourse(id) {
-  const snap = await getDoc(doc(db, 'courses', id))
+  const snap = await getDoc(doc(db, COURSES_COL, id))
   return snap.exists() ? { id: snap.id, ...snap.data() } : null
 }
 
@@ -43,34 +43,34 @@ export async function newCourse(profile) {
 
 export async function saveCourse(id, data) {
   const { id: _drop, createdAt: _drop2, ...clean } = data
-  await updateDoc(doc(db, 'courses', id), {
+  await updateDoc(doc(db, COURSES_COL, id), {
     ...clean,
     updatedAt: serverTimestamp(),
   })
 }
 
-export const removeCourse = (id) => deleteDoc(doc(db, 'courses', id))
+export const removeCourse = (id) => deleteDoc(doc(db, COURSES_COL, id))
 
 // ───────────── ניהול משתמשים ─────────────
 
 export async function listUsers() {
-  const snap = await getDocs(query(collection(db, 'users'), orderBy('username')))
+  const snap = await getDocs(query(collection(db, USERS_COL), orderBy('username')))
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
 export async function createUserProfile(uid, data) {
-  await setDoc(doc(db, 'users', uid), {
+  await setDoc(doc(db, USERS_COL, uid), {
     ...data,
     createdAt: serverTimestamp(),
   })
 }
 
 export const updateUserProfile = (uid, data) =>
-  updateDoc(doc(db, 'users', uid), data)
+  updateDoc(doc(db, USERS_COL, uid), data)
 
 export const usernameTaken = async (username) => {
   const snap = await getDocs(
-    query(collection(db, 'users'), where('username', '==', username.toLowerCase())),
+    query(collection(db, USERS_COL), where('username', '==', username.toLowerCase())),
   )
   return !snap.empty
 }

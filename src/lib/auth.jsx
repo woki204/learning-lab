@@ -8,7 +8,7 @@ import {
   EmailAuthProvider,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db, usernameToEmail } from './firebase'
+import { auth, db, usernameToEmail, USERS_COL } from './firebase'
 
 const AuthContext = createContext(null)
 
@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
         setLoading(false)
         return
       }
-      const snap = await getDoc(doc(db, 'users', fbUser.uid))
+      const snap = await getDoc(doc(db, USERS_COL, fbUser.uid))
       setUser(fbUser)
       setProfile(snap.exists() ? { id: fbUser.uid, ...snap.data() } : null)
       setLoading(false)
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
       usernameToEmail(username),
       password,
     )
-    const snap = await getDoc(doc(db, 'users', cred.user.uid))
+    const snap = await getDoc(doc(db, USERS_COL, cred.user.uid))
     if (snap.exists() && snap.data().disabled) {
       await signOut(auth)
       throw new Error('החשבון הזה הושעה. פנה למנהל המערכת.')
@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
     await reauthenticateWithCredential(auth.currentUser, cred)
     await updatePassword(auth.currentUser, newPassword)
     await setDoc(
-      doc(db, 'users', auth.currentUser.uid),
+      doc(db, USERS_COL, auth.currentUser.uid),
       { mustChangePassword: false, passwordChangedAt: serverTimestamp() },
       { merge: true },
     )

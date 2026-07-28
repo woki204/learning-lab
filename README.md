@@ -23,15 +23,24 @@ npm install
 npm run dev
 ```
 
-## הגדרת Firebase (חובה לפני שימוש)
+## Firebase — פרויקט משותף
 
-1. היכנס ל-[console.firebase.google.com](https://console.firebase.google.com) וצור פרויקט חדש.
-2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
-3. **Build → Firestore Database → Create database** (מצב Production).
-4. **Project settings → Your apps → Web (`</>`)** — רשום אפליקציה וקבל את אובייקט
-   `firebaseConfig`. העתק את ערכיו לקובץ [`src/lib/firebase.js`](src/lib/firebase.js).
-   *(המפתחות האלה ציבוריים מטבעם ומיועדים לרוץ בדפדפן — ההגנה האמיתית היא כללי האבטחה.)*
-5. **Firestore → Rules** — הדבק את התוכן של [`firestore.rules`](firestore.rules) ולחץ Publish.
+המערכת רצה על פרויקט Firebase קיים, **`eduai-planner-1b6ac`**, שמשרת גם את אתר
+הפורטפוליו. ההגדרות כבר בקוד ([`src/lib/firebase.js`](src/lib/firebase.js)) ואין
+צורך לשנות דבר.
+
+כדי לא להתנגש בנתוני הפורטפוליו (`users`, `apps`, `clicks`, `favCounts`), כל מה
+ששייך למערכת הזו יושב בקולקציות עם תחילית **`ll_`**:
+
+| קולקציה | תוכן |
+| --- | --- |
+| `ll_users` | פרופילי מנהלים ומרצים |
+| `ll_courses` | סביבות הלמידה |
+
+### כללי אבטחה
+
+פתח **Firestore → Rules** ושתול את שלושת הבלוקים מתוך [`firestore.rules`](firestore.rules)
+**בתוך** הכללים הקיימים — אל תחליף את כל התוכן, זה ינתק את הפורטפוליו.
 
 ### יצירת מנהל המערכת הראשון
 
@@ -41,7 +50,7 @@ npm run dev
    - Email: `admin@users.learning-lab.local`
    - Password: בחר סיסמה
 2. העתק את ה-**User UID** שנוצר.
-3. **Firestore → Start collection** בשם `users`, ובתוכה מסמך שה-**Document ID**
+3. **Firestore → Start collection** בשם `ll_users`, ובתוכה מסמך שה-**Document ID**
    שלו הוא ה-UID שהעתקת, עם השדות:
 
    | שדה | סוג | ערך |

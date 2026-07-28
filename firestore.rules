@@ -1,45 +1,49 @@
-rules_version = '2';
+// ⚠️ אל תדביק את הקובץ הזה כמו שהוא במקום הכללים הקיימים.
+//
+// פרויקט Firestore אחד (eduai-planner-1b6ac) משרת גם את אתר הפורטפוליו,
+// שמשתמש בקולקציות users / apps / clicks / favCounts. החלפת כל הכללים
+// בקובץ הזה תנתק את הפורטפוליו מהנתונים שלו.
+//
+// מה לעשות: פתח Firebase Console → Firestore → Rules, ושתול את שלושת
+// הבלוקים שלמטה *בתוך* הכללים הקיימים, ממש לפני הסוגר המסולסל האחרון
+// של `match /databases/{database}/documents { ... }`.
+//
+// כל מה ששייך למעבדת הלמידה נושא תחילית ll_ ולכן אינו מתנגש בשום דבר קיים.
 
-// כללי האבטחה של Firestore.
-// העתק את התוכן הזה ל-Firebase Console → Firestore Database → Rules → Publish.
-service cloud.firestore {
-  match /databases/{database}/documents {
+// ── 1. פונקציות עזר ──────────────────────────────────────────
 
-    function signedIn() {
-      return request.auth != null;
-    }
+function llSignedIn() {
+  return request.auth != null;
+}
 
-    function profile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
+function llIsAdmin() {
+  return llSignedIn()
+    && exists(/databases/$(database)/documents/ll_users/$(request.auth.uid))
+    && get(/databases/$(database)/documents/ll_users/$(request.auth.uid)).data.role == 'admin';
+}
 
-    function isAdmin() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && profile().role == 'admin';
-    }
+// ── 2. פרופילי המרצים והמנהלים ───────────────────────────────
 
-    // פרופילי משתמשים — רק המנהל מנהל אותם.
-    match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (request.auth.uid == uid
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['mustChangePassword', 'passwordChangedAt', 'displayName']));
-    }
+match /ll_users/{uid} {
+  allow read: if llSignedIn() && (request.auth.uid == uid || llIsAdmin());
+  allow create, delete: if llIsAdmin();
+  allow update: if llIsAdmin()
+    || (request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['mustChangePassword', 'passwordChangedAt', 'displayName']));
+}
 
-    // סביבות למידה — קריאה ציבורית רק אחרי פרסום (זה מה שמאפשר
-    // ללומדים להיכנס דרך הקישור בלי חשבון). כתיבה — לבעלים בלבד.
-    match /courses/{courseId} {
-      allow read: if resource.data.published == true
-        || (signedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin()));
+// ── 3. סביבות הלמידה ─────────────────────────────────────────
+// קריאה ציבורית רק אחרי פרסום — זה מה שמאפשר ללומדים להיכנס
+// דרך הקישור בלי חשבון. כתיבה — לבעלים או למנהל בלבד.
 
-      allow create: if signedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
+match /ll_courses/{courseId} {
+  allow read: if resource.data.published == true
+    || (llSignedIn() && (resource.data.ownerUid == request.auth.uid || llIsAdmin()));
 
-      allow update, delete: if signedIn()
-        && (resource.data.ownerUid == request.auth.uid || isAdmin());
-    }
-  }
+  allow create: if llSignedIn()
+    && request.resource.data.ownerUid == request.auth.uid;
+
+  allow update, delete: if llSignedIn()
+    && (resource.data.ownerUid == request.auth.uid || llIsAdmin());
 }
