@@ -12,7 +12,7 @@ import SlideCanvas from '../components/SlideCanvas'
 import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
-import { ElementRibbon } from '../components/Ribbon'
+import { ElementRibbon, DefaultRibbon } from '../components/Ribbon'
 import { SideRail, TextPanel, QuestionPanel, SlidesPanel } from '../components/SideRail'
 
 const MODES = [
@@ -280,16 +280,25 @@ export default function Editor() {
 
       {error && <div className="alert error" style={{ margin: '10px 20px 0' }}>{error}</div>}
 
-      {isEditMode && selected && (
+      {isEditMode && (
         <div className="ribbon">
-          <ElementRibbon
-            block={selected}
-            onChange={(nb) => updateBlockById(selected.id, nb)}
-            onRestack={(dir) => restack(selected.id, dir)}
-            onDuplicate={() => duplicateBlock(selected.id)}
-            onDelete={() => deleteBlock(selected.id)}
-            onEditContent={() => setContentOpen(true)}
-          />
+          {selected ? (
+            <ElementRibbon
+              block={selected}
+              onChange={(nb) => updateBlockById(selected.id, nb)}
+              onRestack={(dir) => restack(selected.id, dir)}
+              onDuplicate={() => duplicateBlock(selected.id)}
+              onDelete={() => deleteBlock(selected.id)}
+              onEditContent={() => setContentOpen(true)}
+            />
+          ) : (
+            <DefaultRibbon
+              slide={slide}
+              index={index}
+              total={course.slides.length}
+              onRename={(title) => patchSlide(index, { title })}
+            />
+          )}
         </div>
       )}
 

@@ -1,33 +1,12 @@
-import { BLOCK_TYPES, newId } from '../lib/blocks'
-import { textCss, normalizeTextBlock } from '../lib/typography'
-import TextStylePanel from './TextStylePanel'
+import { newId } from '../lib/blocks'
 
 /**
- * לוח התוכן והעיצוב של הרכיב הנבחר. המיקום והגודל נערכים על הבמה
- * עצמה (גרירה וידיות) ובשדות המספריים שמעל הלוח הזה.
+ * עורך התוכן של רכיב, לסוגים שהתוכן שלהם גדול מכדי לשבת בסרגל
+ * הכלים. טקסט נערך ישירות על הבמה ולכן אינו כאן.
  */
 export default function BlockEditor({ block, onChange }) {
-  if (block.type === 'text') {
-    const b = normalizeTextBlock(block)
-    return (
-      <>
-        <TextStylePanel block={b} onChange={onChange} />
-        <label className="field" style={{ marginBottom: 0 }}>
-          <span>תוכן</span>
-          <textarea
-            value={b.content}
-            onChange={(e) => onChange({ ...b, content: e.target.value })}
-            rows={3}
-            style={{ ...textCss(b.style), fontSize: 15, textAlign: 'right' }}
-          />
-        </label>
-      </>
-    )
-  }
-
   if (block.type === 'question') return <QuestionEditor block={block} onChange={onChange} />
-
-  return <p className="muted tiny">אין עדיין עורך לסוג הרכיב הזה.</p>
+  return <p className="muted tiny">אין עורך תוכן נפרד לסוג הרכיב הזה.</p>
 }
 
 function QuestionEditor({ block, onChange }) {
