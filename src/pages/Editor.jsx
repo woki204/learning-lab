@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCourse, saveCourse } from '../lib/db'
-import { INSERT_MENU, createSlide } from '../lib/blocks'
-import { ensureFrame, clampFrame, CANVAS_W, CANVAS_H } from '../lib/canvas'
+import { createSlide } from '../lib/blocks'
+import { ensureFrame, clampFrame } from '../lib/canvas'
 import { learnLink } from '../lib/links'
 import SlideNav from '../components/SlideNav'
 import SlideCanvas from '../components/SlideCanvas'
 import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
+import { InsertRibbon, ElementRibbon } from '../components/Ribbon'
 
 const MODES = [
   { key: 'edit', label: '✏️ עריכה' },
@@ -29,6 +30,7 @@ export default function Editor() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [contentOpen, setContentOpen] = useState(false)
   const [answers, setAnswers] = useState({})
   const scaleRef = useRef(1)
 
@@ -247,28 +249,37 @@ export default function Editor() {
       {error && <div className="alert error" style={{ margin: '10px 20px 0' }}>{error}</div>}
 
       {isEditMode && (
-        <div className="toolbar">
-          <span className="tiny muted">הוסף:</span>
-          {INSERT_MENU.map((t) => (
-            <button key={t.key} className="btn subtle sm" onClick={() => addBlock(t)}>
-              <span className="ins-badge">{t.badge}</span> {t.label}
-            </button>
-          ))}
+        <div className="ribbon">
+          {selected ? (
+            <ElementRibbon
+              block={selected}
+              onChange={(nb) => updateBlockById(selected.id, nb)}
+              onRestack={(dir) => restack(selected.id, dir)}
+              onDuplicate={() => duplicateBlock(selected.id)}
+              onDelete={() => deleteBlock(selected.id)}
+              onEditContent={() => setContentOpen(true)}
+            />
+          ) : (
+            <InsertRibbon onAdd={addBlock} />
+          )}
 
-          <span className="sp-sep" />
-
-          <input
-            className="slide-title-input"
-            type="text"
-            value={slide.title}
-            onChange={(e) => patchSlide(index, { title: e.target.value })}
-            title="שם השלב — מופיע לך בלבד, לא ללומדים"
-          />
-          <button className="btn ghost sm" onClick={() => moveSlide(-1)} disabled={index === 0} title="הקדם את השלב">▲</button>
-          <button className="btn ghost sm" onClick={() => moveSlide(1)} disabled={index === course.slides.length - 1} title="אחר את השלב">▼</button>
-          <button className="btn subtle sm" onClick={duplicateSlide}>שכפל שלב</button>
-          <button className="btn danger sm" onClick={deleteSlide}>מחק שלב</button>
-          <button className="btn subtle sm" onClick={addSlide}>+ שלב חדש</button>
+          <div className="ribbon-row slide-row">
+            <span className="sp-label">השלב</span>
+            <input
+              className="slide-title-input"
+              type="text"
+              value={slide.title}
+              onChange={(e) => patchSlide(index, { title: e.target.value })}
+              title="שם השלב — מופיע לך בלבד, לא ללומדים"
+            />
+            <button className="btn ghost sm" onClick={() => moveSlide(-1)} disabled={index === 0} title="הקדם את השלב">▲</button>
+            <button className="btn ghost sm" onClick={() => moveSlide(1)} disabled={index === course.slides.length - 1} title="אחר את השלב">▼</button>
+            <button className="btn subtle sm" onClick={duplicateSlide}>שכפל שלב</button>
+            <button className="btn danger sm" onClick={deleteSlide}>מחק שלב</button>
+            <button className="btn subtle sm" onClick={addSlide}>+ שלב חדש</button>
+            <span className="spacer" />
+            <span className="tiny muted">שלב {index + 1} מתוך {course.slides.length}</span>
+          </div>
         </div>
       )}
 
@@ -312,29 +323,6 @@ export default function Editor() {
           <p className="canvas-hint">הבמה ריקה — הוסף רכיב מהסרגל שלמעלה.</p>
         )}
 
-        {isEditMode && selected && (
-          <div className="inspector">
-            <div className="inspector-head">
-              <strong>הרכיב הנבחר</strong>
-              <span className="spacer" />
-              <button className="btn ghost sm" onClick={() => restack(selected.id, 'front')} title="הבא לחזית">⬆ לחזית</button>
-              <button className="btn ghost sm" onClick={() => restack(selected.id, 'back')} title="שלח לרקע">⬇ לרקע</button>
-              <button className="btn subtle sm" onClick={() => duplicateBlock(selected.id)}>שכפל</button>
-              <button className="btn danger sm" onClick={() => deleteBlock(selected.id)}>מחק</button>
-            </div>
-
-            <FrameFields
-              frame={selected.frame}
-              onChange={(f) => updateBlockById(selected.id, (b) => ({ ...b, frame: clampFrame(f) }))}
-            />
-
-            <BlockEditor
-              block={selected}
-              onChange={(nb) => updateBlockById(selected.id, nb)}
-            />
-          </div>
-        )}
-
         {isEditMode && !selected && blocks.length > 0 && (
           <p className="canvas-hint">
             לחץ על רכיב כדי לבחור ולעצב אותו · גרור להזזה · משוך מהפינות לשינוי גודל ·
@@ -357,6 +345,21 @@ export default function Editor() {
         }}
       />
 
+      {contentOpen && selected && (
+        <div className="modal-back" onClick={() => setContentOpen(false)}>
+          <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+            <h2>תוכן השאלה</h2>
+            <BlockEditor
+              block={selected}
+              onChange={(nb) => updateBlockById(selected.id, nb)}
+            />
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setContentOpen(false)}>סיום</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {settingsOpen && (
         <SettingsModal
           course={course}
@@ -365,30 +368,6 @@ export default function Editor() {
           courseId={id}
         />
       )}
-    </div>
-  )
-}
-
-/** מיקום וגודל מדויקים ביחידות הבמה (1000 × 562) */
-function FrameFields({ frame, onChange }) {
-  const f = (key, label) => (
-    <label className="sp-mini" key={key}>
-      {label}
-      <input
-        type="number"
-        value={frame[key]}
-        onChange={(e) => onChange({ ...frame, [key]: Number(e.target.value) || 0 })}
-      />
-    </label>
-  )
-  return (
-    <div className="sp-row" style={{ marginBottom: 12 }}>
-      <span className="sp-label">מיקום וגודל</span>
-      {f('x', 'ימין')}
-      {f('y', 'למעלה')}
-      {f('w', 'רוחב')}
-      {f('h', 'גובה')}
-      <span className="tiny muted">מתוך {CANVAS_W}×{Math.round(CANVAS_H)}</span>
     </div>
   )
 }

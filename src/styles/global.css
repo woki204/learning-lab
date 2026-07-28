@@ -482,43 +482,47 @@ textarea {
   font-size: 14px;
 }
 
-/* סרגל הכלים של העורך */
-.toolbar {
+/* ───────── סרגל הכלים ההקשרי ───────── */
+.ribbon {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.ribbon-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 20px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  padding: 7px 20px;
   flex-wrap: wrap;
+  min-height: 46px;
+}
+.ribbon-row + .ribbon-row {
+  border-top: 1px solid var(--line);
+}
+.ribbon-row .spacer {
+  flex: 1;
+}
+.ribbon-row.slide-row {
+  background: var(--surface-2);
+}
+.ribbon-row select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+.ribbon-row .sp-mini input[type='number'] {
+  width: 62px;
+  padding: 5px 7px;
+  font-size: 14px;
 }
 .slide-title-input {
-  width: 180px;
+  width: 170px;
   padding: 5px 9px;
   font-size: 14px;
 }
 
-/* לוח המאפיינים של הרכיב הנבחר */
-.inspector {
-  max-width: 1000px;
-  margin: 16px auto 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-sm);
-}
-.inspector-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
-}
-.inspector-head .spacer {
-  flex: 1;
+.modal.wide {
+  max-width: 620px;
 }
 
 /* ───────── סרגל הניווט התחתון ───────── */

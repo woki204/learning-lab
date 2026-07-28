@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import {
   FONTS,
   BORDER_STYLES,
@@ -11,9 +12,12 @@ import {
 /**
  * לוח העיצוב של תיבת טקסט — גופן, צבע, הדגשות, יישור, ועיצוב התיבה עצמה.
  */
-export default function TextStylePanel({ block, onChange }) {
+export default function TextStylePanel({ block, onChange, inRibbon = false }) {
   const style = { ...defaultStyle(block.variant), ...block.style }
   const box = { ...defaultBox(), ...block.box }
+  const Wrap = inRibbon ? Fragment : 'div'
+  const wrapProps = inRibbon ? {} : { className: 'style-panel' }
+  const row = inRibbon ? 'ribbon-row' : 'sp-row'
 
   const setStyle = (patch) => onChange({ ...block, style: { ...style, ...patch } })
   const setBox = (patch) => onChange({ ...block, box: { ...box, ...patch } })
@@ -31,8 +35,8 @@ export default function TextStylePanel({ block, onChange }) {
     })
 
   return (
-    <div className="style-panel">
-      <div className="sp-row">
+    <Wrap {...wrapProps}>
+      <div className={row}>
         <span className="sp-label">רמה</span>
         <div className="chips">
           {variantList.map((v) => (
@@ -48,7 +52,7 @@ export default function TextStylePanel({ block, onChange }) {
         </div>
       </div>
 
-      <div className="sp-row">
+      <div className={row}>
         <span className="sp-label">גופן</span>
         <select
           value={style.fontFamily}
@@ -128,7 +132,7 @@ export default function TextStylePanel({ block, onChange }) {
         </div>
       </div>
 
-      <div className="sp-row">
+      <div className={row}>
         <label className="sp-check">
           <input
             type="checkbox"
@@ -216,6 +220,6 @@ export default function TextStylePanel({ block, onChange }) {
           </>
         )}
       </div>
-    </div>
+    </Wrap>
   )
 }
