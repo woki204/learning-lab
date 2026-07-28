@@ -1,10 +1,9 @@
-import { CANVAS_W, CANVAS_H, clampFrame } from '../lib/canvas'
 import { VARIANTS, BORDER_STYLES, defaultBox } from '../lib/typography'
 import TextStylePanel from './TextStylePanel'
 
 /**
- * סרגל הכלים העליון. הוא הקשרי: כשאין בחירה הוא מציע להוסיף רכיבים,
- * וברגע שנבחר רכיב הוא מתחלף לכלי העריכה שלו.
+ * סרגל הכלים העליון של הרכיב הנבחר — מתחלף לפי סוג הרכיב.
+ * מיקום וגודל נקבעים בגרירה ובידיות על הבמה, ולכן אין להם שדות כאן.
  */
 export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelete, onEditContent }) {
   const isText = block.type === 'text'
@@ -28,12 +27,6 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
       )}
 
       <div className="ribbon-row">
-        <span className="sp-label">מיקום וגודל</span>
-        <FrameFields frame={block.frame} onChange={(f) => onChange({ ...block, frame: clampFrame(f) })} />
-        <span className="tiny muted">מתוך {CANVAS_W}×{Math.round(CANVAS_H)}</span>
-
-        <span className="sp-sep" />
-
         <button className="btn ghost sm" onClick={() => onRestack('front')} title="הבא לחזית">⬆ לחזית</button>
         <button className="btn ghost sm" onClick={() => onRestack('back')} title="שלח לרקע">⬇ לרקע</button>
         <button className="btn subtle sm" onClick={onDuplicate}>שכפל</button>
@@ -144,27 +137,3 @@ function ImageRow({ block, onChange }) {
   )
 }
 
-/**
- * הבמה מיושרת משמאל לימין כדי שמיקומים יתנהגו זהה בכל שפה,
- * ולכן "אופקי" נמדד מהקצה השמאלי של השקופית.
- */
-function FrameFields({ frame, onChange }) {
-  const f = (key, label, title) => (
-    <label className="sp-mini" key={key} title={title}>
-      {label}
-      <input
-        type="number"
-        value={frame[key]}
-        onChange={(e) => onChange({ ...frame, [key]: Number(e.target.value) || 0 })}
-      />
-    </label>
-  )
-  return (
-    <>
-      {f('x', 'אופקי', 'מרחק מהקצה השמאלי של השקופית')}
-      {f('y', 'אנכי', 'מרחק מהקצה העליון של השקופית')}
-      {f('w', 'רוחב')}
-      {f('h', 'גובה')}
-    </>
-  )
-}
