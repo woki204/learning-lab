@@ -1,4 +1,3 @@
-import { INSERT_MENU } from '../lib/blocks'
 import { CANVAS_W, CANVAS_H, clampFrame } from '../lib/canvas'
 import { VARIANTS, BORDER_STYLES, defaultBox } from '../lib/typography'
 import TextStylePanel from './TextStylePanel'
@@ -7,21 +6,6 @@ import TextStylePanel from './TextStylePanel'
  * סרגל הכלים העליון. הוא הקשרי: כשאין בחירה הוא מציע להוסיף רכיבים,
  * וברגע שנבחר רכיב הוא מתחלף לכלי העריכה שלו.
  */
-export function InsertRibbon({ onAdd }) {
-  return (
-    <div className="ribbon-row">
-      <span className="sp-label">הוסף רכיב</span>
-      {INSERT_MENU.map((t) => (
-        <button key={t.key} className="btn subtle sm" onClick={() => onAdd(t)}>
-          <span className="ins-badge">{t.badge}</span> {t.label}
-        </button>
-      ))}
-      <span className="spacer" />
-      <span className="tiny muted">לחץ על רכיב בבמה כדי לעצב אותו</span>
-    </div>
-  )
-}
-
 export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelete, onEditContent }) {
   const isText = block.type === 'text'
 

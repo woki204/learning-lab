@@ -12,7 +12,8 @@ import SlideCanvas from '../components/SlideCanvas'
 import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
-import { InsertRibbon, ElementRibbon } from '../components/Ribbon'
+import { ElementRibbon } from '../components/Ribbon'
+import { SideRail, TextPanel, QuestionPanel, SlidesPanel } from '../components/SideRail'
 
 const MODES = [
   { key: 'edit', label: '✏️ עריכה' },
@@ -36,7 +37,7 @@ export default function Editor() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [contentOpen, setContentOpen] = useState(false)
   const [media, setMedia] = useState([])
-  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [railTab, setRailTab] = useState('text')
   const [answers, setAnswers] = useState({})
   const scaleRef = useRef(1)
 
@@ -140,6 +141,11 @@ export default function Editor() {
   const selected = blocks.find((b) => b.id === selectedId) ?? null
 
   // ── שקופיות ──
+  const goToSlide = (i) => {
+    setIndex(i)
+    setSelectedId(null)
+    setEditingId(null)
+  }
   const addSlide = () => {
     patch((c) => ({ ...c, slides: [...c.slides, createSlide(c.slides.length)] }))
     setIndex(course.slides.length)
@@ -274,52 +280,45 @@ export default function Editor() {
 
       {error && <div className="alert error" style={{ margin: '10px 20px 0' }}>{error}</div>}
 
-      {isEditMode && (
+      {isEditMode && selected && (
         <div className="ribbon">
-          {selected ? (
-            <ElementRibbon
-              block={selected}
-              onChange={(nb) => updateBlockById(selected.id, nb)}
-              onRestack={(dir) => restack(selected.id, dir)}
-              onDuplicate={() => duplicateBlock(selected.id)}
-              onDelete={() => deleteBlock(selected.id)}
-              onEditContent={() => setContentOpen(true)}
-            />
-          ) : (
-            <InsertRibbon onAdd={addBlock} />
-          )}
-
-          <div className="ribbon-row slide-row">
-            <span className="sp-label">השלב</span>
-            <input
-              className="slide-title-input"
-              type="text"
-              value={slide.title}
-              onChange={(e) => patchSlide(index, { title: e.target.value })}
-              title="שם השלב — מופיע לך בלבד, לא ללומדים"
-            />
-            <button className="btn ghost sm" onClick={() => moveSlide(-1)} disabled={index === 0} title="הקדם את השלב">▲</button>
-            <button className="btn ghost sm" onClick={() => moveSlide(1)} disabled={index === course.slides.length - 1} title="אחר את השלב">▼</button>
-            <button className="btn subtle sm" onClick={duplicateSlide}>שכפל שלב</button>
-            <button className="btn danger sm" onClick={deleteSlide}>מחק שלב</button>
-            <button className="btn subtle sm" onClick={addSlide}>+ שלב חדש</button>
-            <span className="spacer" />
-            <span className="tiny muted">שלב {index + 1} מתוך {course.slides.length}</span>
-          </div>
+          <ElementRibbon
+            block={selected}
+            onChange={(nb) => updateBlockById(selected.id, nb)}
+            onRestack={(dir) => restack(selected.id, dir)}
+            onDuplicate={() => duplicateBlock(selected.id)}
+            onDelete={() => deleteBlock(selected.id)}
+            onEditContent={() => setContentOpen(true)}
+          />
         </div>
       )}
 
-      <div className="stage-body">
-        {isEditMode && profile && (
-          <MediaLibrary
-            ownerUid={profile.id}
-            media={media}
-            setMedia={setMedia}
-            open={libraryOpen}
-            onToggle={() => setLibraryOpen((v) => !v)}
-          />
+      <div className="workspace">
+        {isEditMode && <SideRail active={railTab} onSelect={setRailTab} />}
+
+        {isEditMode && railTab && (
+          <aside className="side-panel">
+            {railTab === 'text' && <TextPanel onAdd={addBlock} />}
+            {railTab === 'questions' && <QuestionPanel onAdd={addBlock} />}
+            {railTab === 'images' && profile && (
+              <MediaLibrary ownerUid={profile.id} media={media} setMedia={setMedia} />
+            )}
+            {railTab === 'slides' && (
+              <SlidesPanel
+                slides={course.slides}
+                index={index}
+                onGo={goToSlide}
+                onAdd={addSlide}
+                onDuplicate={duplicateSlide}
+                onDelete={deleteSlide}
+                onMove={moveSlide}
+                onRename={(title) => patchSlide(index, { title })}
+              />
+            )}
+          </aside>
         )}
 
+        <div className="stage-body">
         <SlideCanvas
           className={isEditMode ? 'editable' : ''}
           onBackgroundPointerDown={() => {
@@ -357,7 +356,9 @@ export default function Editor() {
         </SlideCanvas>
 
         {blocks.length === 0 && isEditMode && (
-          <p className="canvas-hint">הבמה ריקה — הוסף רכיב מהסרגל שלמעלה.</p>
+          <p className="canvas-hint">
+            הבמה ריקה — בחר קטגוריה ברצועה שבצד ימין כדי להוסיף רכיב.
+          </p>
         )}
 
         {isEditMode && !selected && blocks.length > 0 && (
@@ -370,17 +371,10 @@ export default function Editor() {
         {mode === 'preview' && (
           <p className="canvas-hint">מצב תצוגה — התשובות הנכונות מסומנות. הלומדים לא רואים אותן.</p>
         )}
+        </div>
       </div>
 
-      <SlideNav
-        total={course.slides.length}
-        current={index}
-        onGo={(i) => {
-          setIndex(i)
-          setSelectedId(null)
-          setEditingId(null)
-        }}
-      />
+      <SlideNav total={course.slides.length} current={index} onGo={goToSlide} />
 
       {contentOpen && selected && (
         <div className="modal-back" onClick={() => setContentOpen(false)}>
