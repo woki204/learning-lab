@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom'
 import { getCourse } from '../lib/db'
 import { gradeCourse } from '../lib/blocks'
 import SlideNav from '../components/SlideNav'
-import BlockRenderer from '../components/BlockRenderer'
+import SlideCanvas from '../components/SlideCanvas'
+import StaticBlock from '../components/StaticBlock'
 import Certificate from '../components/Certificate'
+import { ensureFrame } from '../lib/canvas'
 
 /**
  * מצב לומד — הכניסה הציבורית דרך הקישור שהמרצה שיתף.
@@ -102,26 +104,24 @@ export default function Learn() {
       </div>
 
       <div className="stage-body">
-        <div className="slide">
-          <h2 className="slide-title">{slide.title}</h2>
-          {slide.blocks.length === 0 && <p className="slide-empty">השלב הזה ריק.</p>}
-          {slide.blocks.map((b) => (
-            <BlockRenderer
+        <SlideCanvas>
+          {(slide.blocks ?? []).map((b) => (
+            <StaticBlock
               key={b.id}
-              block={b}
+              block={ensureFrame(b)}
               answer={answers[b.id]}
               onAnswer={(bid, val) => setAnswers((a) => ({ ...a, [bid]: val }))}
             />
           ))}
+        </SlideCanvas>
 
-          {isLast && (
-            <div style={{ marginTop: 32, textAlign: 'center' }}>
-              <button className="btn" onClick={() => setStage('done')}>
-                🏅 סיים והנפק תעודה
-              </button>
-            </div>
-          )}
-        </div>
+        {isLast && (
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <button className="btn" onClick={() => setStage('done')}>
+              🏅 סיים והנפק תעודה
+            </button>
+          </div>
+        )}
       </div>
 
       <SlideNav

@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCourse, saveCourse } from '../lib/db'
 import { INSERT_MENU, createSlide } from '../lib/blocks'
+import { ensureFrame, clampFrame, CANVAS_W, CANVAS_H } from '../lib/canvas'
 import { learnLink } from '../lib/links'
 import SlideNav from '../components/SlideNav'
+import SlideCanvas from '../components/SlideCanvas'
+import CanvasBlock from '../components/CanvasBlock'
+import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
-import BlockRenderer from '../components/BlockRenderer'
 
 const MODES = [
   { key: 'edit', label: '✏️ עריכה' },
@@ -20,19 +23,29 @@ export default function Editor() {
   const [course, setCourse] = useState(null)
   const [mode, setMode] = useState('edit')
   const [index, setIndex] = useState(0)
+  const [selectedId, setSelectedId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [answers, setAnswers] = useState({}) // רק לניסוי במצב לומד
+  const [answers, setAnswers] = useState({})
+  const scaleRef = useRef(1)
 
   useEffect(() => {
     getCourse(id)
-      .then((c) => (c ? setCourse(c) : setError('הסביבה לא נמצאה.')))
+      .then((c) => {
+        if (!c) return setError('הסביבה לא נמצאה.')
+        // כל רכיב מקבל מסגרת אם עדיין אין לו
+        c.slides = c.slides.map((s) => ({
+          ...s,
+          blocks: (s.blocks ?? []).map(ensureFrame),
+        }))
+        setCourse(c)
+      })
       .catch((e) => setError(e.message))
   }, [id])
 
-  // אזהרה לפני יציאה עם שינויים שלא נשמרו
   useEffect(() => {
     const handler = (e) => {
       if (!dirty) return
@@ -48,13 +61,16 @@ export default function Editor() {
     setDirty(true)
   }, [])
 
-  const patchSlide = (slideIndex, updater) =>
-    patch((c) => ({
-      ...c,
-      slides: c.slides.map((s, i) =>
-        i === slideIndex ? (typeof updater === 'function' ? updater(s) : { ...s, ...updater }) : s,
-      ),
-    }))
+  const patchSlide = useCallback(
+    (slideIndex, updater) =>
+      patch((c) => ({
+        ...c,
+        slides: c.slides.map((s, i) =>
+          i === slideIndex ? (typeof updater === 'function' ? updater(s) : { ...s, ...updater }) : s,
+        ),
+      })),
+    [patch],
+  )
 
   const save = async () => {
     setSaving(true)
@@ -69,22 +85,63 @@ export default function Editor() {
     }
   }
 
-  if (error && !course) return <div className="center-screen"><div className="alert error">{error}</div></div>
+  // ── קיצורי מקלדת על הבמה ──
+  useEffect(() => {
+    if (mode !== 'edit') return
+    const onKey = (e) => {
+      if (editingId) return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (!selectedId) return
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        deleteBlock(selectedId)
+        return
+      }
+      const step = e.shiftKey ? 10 : 1
+      const deltas = {
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+      }
+      if (deltas[e.key]) {
+        e.preventDefault()
+        const [dx, dy] = deltas[e.key]
+        updateBlockById(selectedId, (b) => ({
+          ...b,
+          frame: clampFrame({ ...b.frame, x: b.frame.x + dx, y: b.frame.y + dy }),
+        }))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  if (error && !course)
+    return <div className="center-screen"><div className="alert error">{error}</div></div>
   if (!course) return <div className="center-screen"><p className="muted">טוען…</p></div>
 
   const slide = course.slides[index] ?? course.slides[0]
+  const blocks = slide.blocks ?? []
+  const selected = blocks.find((b) => b.id === selectedId) ?? null
 
-  // ── פעולות על שקופיות ──
+  // ── שקופיות ──
   const addSlide = () => {
     patch((c) => ({ ...c, slides: [...c.slides, createSlide(c.slides.length)] }))
     setIndex(course.slides.length)
+    setSelectedId(null)
   }
   const duplicateSlide = () => {
     const copy = structuredClone(slide)
     copy.id = crypto.randomUUID()
     copy.title += ' (עותק)'
     copy.blocks = copy.blocks.map((b) => ({ ...b, id: crypto.randomUUID() }))
-    patch((c) => ({ ...c, slides: [...c.slides.slice(0, index + 1), copy, ...c.slides.slice(index + 1)] }))
+    patch((c) => ({
+      ...c,
+      slides: [...c.slides.slice(0, index + 1), copy, ...c.slides.slice(index + 1)],
+    }))
     setIndex(index + 1)
   }
   const deleteSlide = () => {
@@ -92,6 +149,7 @@ export default function Editor() {
     if (!confirm(`למחוק את שלב ${index + 1}?`)) return
     patch((c) => ({ ...c, slides: c.slides.filter((_, i) => i !== index) }))
     setIndex(Math.max(0, index - 1))
+    setSelectedId(null)
   }
   const moveSlide = (dir) => {
     const to = index + dir
@@ -104,29 +162,59 @@ export default function Editor() {
     setIndex(to)
   }
 
-  // ── פעולות על בלוקים ──
-  const addBlock = (menuItem) =>
-    patchSlide(index, (s) => ({ ...s, blocks: [...s.blocks, menuItem.make()] }))
-  const updateBlock = (bi, block) =>
-    patchSlide(index, (s) => ({ ...s, blocks: s.blocks.map((b, i) => (i === bi ? block : b)) }))
-  const deleteBlock = (bi) =>
-    patchSlide(index, (s) => ({ ...s, blocks: s.blocks.filter((_, i) => i !== bi) }))
-  const moveBlock = (bi, dir) =>
+  // ── רכיבים ──
+  const addBlock = (menuItem) => {
+    const block = menuItem.make(blocks.length)
+    patchSlide(index, (s) => ({ ...s, blocks: [...(s.blocks ?? []), block] }))
+    setSelectedId(block.id)
+  }
+  const updateBlockById = (bid, updater) =>
+    patchSlide(index, (s) => ({
+      ...s,
+      blocks: s.blocks.map((b) =>
+        b.id === bid ? (typeof updater === 'function' ? updater(b) : updater) : b,
+      ),
+    }))
+  const deleteBlock = (bid) => {
+    patchSlide(index, (s) => ({ ...s, blocks: s.blocks.filter((b) => b.id !== bid) }))
+    setSelectedId(null)
+    setEditingId(null)
+  }
+  const duplicateBlock = (bid) => {
+    const src = blocks.find((b) => b.id === bid)
+    if (!src) return
+    const copy = {
+      ...structuredClone(src),
+      id: crypto.randomUUID(),
+      frame: clampFrame({ ...src.frame, x: src.frame.x + 20, y: src.frame.y + 20 }),
+    }
+    patchSlide(index, (s) => ({ ...s, blocks: [...s.blocks, copy] }))
+    setSelectedId(copy.id)
+  }
+  // סדר המערך הוא סדר הערימה: אחרון = עליון
+  const restack = (bid, dir) =>
     patchSlide(index, (s) => {
-      const to = bi + dir
-      if (to < 0 || to >= s.blocks.length) return s
-      const blocks = [...s.blocks]
-      ;[blocks[bi], blocks[to]] = [blocks[to], blocks[bi]]
-      return { ...s, blocks }
+      const i = s.blocks.findIndex((b) => b.id === bid)
+      const to = dir === 'front' ? s.blocks.length - 1 : dir === 'back' ? 0 : i + dir
+      if (i < 0 || to < 0 || to >= s.blocks.length || to === i) return s
+      const arr = [...s.blocks]
+      const [item] = arr.splice(i, 1)
+      arr.splice(to, 0, item)
+      return { ...s, blocks: arr }
     })
+
+  const isEditMode = mode === 'edit'
 
   return (
     <div className="stage">
       <div className="stage-bar">
-        <button className="btn ghost sm" onClick={() => {
-          if (dirty && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return
-          navigate('/')
-        }}>
+        <button
+          className="btn ghost sm"
+          onClick={() => {
+            if (dirty && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return
+            navigate('/')
+          }}
+        >
           → חזרה
         </button>
         <span className="title">{course.title}</span>
@@ -139,7 +227,11 @@ export default function Editor() {
             <button
               key={m.key}
               className={mode === m.key ? 'active' : ''}
-              onClick={() => setMode(m.key)}
+              onClick={() => {
+                setMode(m.key)
+                setSelectedId(null)
+                setEditingId(null)
+              }}
             >
               {m.label}
             </button>
@@ -154,76 +246,116 @@ export default function Editor() {
 
       {error && <div className="alert error" style={{ margin: '10px 20px 0' }}>{error}</div>}
 
+      {isEditMode && (
+        <div className="toolbar">
+          <span className="tiny muted">הוסף:</span>
+          {INSERT_MENU.map((t) => (
+            <button key={t.key} className="btn subtle sm" onClick={() => addBlock(t)}>
+              <span className="ins-badge">{t.badge}</span> {t.label}
+            </button>
+          ))}
+
+          <span className="sp-sep" />
+
+          <input
+            className="slide-title-input"
+            type="text"
+            value={slide.title}
+            onChange={(e) => patchSlide(index, { title: e.target.value })}
+            title="שם השלב — מופיע לך בלבד, לא ללומדים"
+          />
+          <button className="btn ghost sm" onClick={() => moveSlide(-1)} disabled={index === 0} title="הקדם את השלב">▲</button>
+          <button className="btn ghost sm" onClick={() => moveSlide(1)} disabled={index === course.slides.length - 1} title="אחר את השלב">▼</button>
+          <button className="btn subtle sm" onClick={duplicateSlide}>שכפל שלב</button>
+          <button className="btn danger sm" onClick={deleteSlide}>מחק שלב</button>
+          <button className="btn subtle sm" onClick={addSlide}>+ שלב חדש</button>
+        </div>
+      )}
+
       <div className="stage-body">
-        <div className="slide">
-          {mode === 'edit' ? (
-            <>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20 }}>
-                <label className="field" style={{ flex: 1, marginBottom: 0 }}>
-                  <span>כותרת השלב ({index + 1} מתוך {course.slides.length})</span>
-                  <input
-                    type="text"
-                    value={slide.title}
-                    onChange={(e) => patchSlide(index, { title: e.target.value })}
-                  />
-                </label>
-                <button className="btn ghost sm" onClick={() => moveSlide(-1)} disabled={index === 0} title="הזז שלב אחורה">▲</button>
-                <button className="btn ghost sm" onClick={() => moveSlide(1)} disabled={index === course.slides.length - 1} title="הזז שלב קדימה">▼</button>
-                <button className="btn subtle sm" onClick={duplicateSlide}>שכפל</button>
-                <button className="btn danger sm" onClick={deleteSlide}>מחק שלב</button>
-              </div>
-
-              {slide.blocks.length === 0 && (
-                <p className="slide-empty">השלב ריק — הוסף כלי מהתפריט שלמטה.</p>
-              )}
-
-              {slide.blocks.map((b, bi) => (
-                <BlockEditor
+        <SlideCanvas
+          className={isEditMode ? 'editable' : ''}
+          onBackgroundPointerDown={() => {
+            setSelectedId(null)
+            setEditingId(null)
+          }}
+        >
+          {(scale) => {
+            scaleRef.current = scale
+            return blocks.map((b) =>
+              isEditMode ? (
+                <CanvasBlock
                   key={b.id}
                   block={b}
-                  onChange={(nb) => updateBlock(bi, nb)}
-                  onDelete={() => deleteBlock(bi)}
-                  onMove={(d) => moveBlock(bi, d)}
-                  isFirst={bi === 0}
-                  isLast={bi === slide.blocks.length - 1}
+                  scale={scale}
+                  selected={b.id === selectedId}
+                  editing={b.id === editingId}
+                  onSelect={() => setSelectedId(b.id)}
+                  onChange={(nb) => updateBlockById(b.id, nb)}
+                  onStartEdit={() => setEditingId(b.id)}
+                  onEndEdit={() => setEditingId(null)}
                 />
-              ))}
-
-              <div className="add-menu">
-                <span className="tiny muted" style={{ alignSelf: 'center' }}>הוסף:</span>
-                {INSERT_MENU.map((t) => (
-                  <button key={t.key} className="btn subtle sm" onClick={() => addBlock(t)}>
-                    <span className="ins-badge">{t.badge}</span> {t.label}
-                  </button>
-                ))}
-                <span className="spacer" style={{ flex: 1 }} />
-                <button className="btn subtle sm" onClick={addSlide}>+ שלב חדש</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="slide-title">{slide.title}</h2>
-              {slide.blocks.length === 0 && <p className="slide-empty">השלב הזה ריק.</p>}
-              {slide.blocks.map((b) => (
-                <BlockRenderer
+              ) : (
+                <StaticBlock
                   key={b.id}
                   block={b}
                   answer={answers[b.id]}
                   onAnswer={(bid, val) => setAnswers((a) => ({ ...a, [bid]: val }))}
                   showKey={mode === 'preview'}
                 />
-              ))}
-              {mode === 'preview' && (
-                <p className="tiny muted" style={{ marginTop: 24, marginBottom: 0 }}>
-                  מצב תצוגה — התשובות הנכונות מסומנות. הלומדים לא רואים אותן.
-                </p>
-              )}
-            </>
-          )}
-        </div>
+              ),
+            )
+          }}
+        </SlideCanvas>
+
+        {blocks.length === 0 && isEditMode && (
+          <p className="canvas-hint">הבמה ריקה — הוסף רכיב מהסרגל שלמעלה.</p>
+        )}
+
+        {isEditMode && selected && (
+          <div className="inspector">
+            <div className="inspector-head">
+              <strong>הרכיב הנבחר</strong>
+              <span className="spacer" />
+              <button className="btn ghost sm" onClick={() => restack(selected.id, 'front')} title="הבא לחזית">⬆ לחזית</button>
+              <button className="btn ghost sm" onClick={() => restack(selected.id, 'back')} title="שלח לרקע">⬇ לרקע</button>
+              <button className="btn subtle sm" onClick={() => duplicateBlock(selected.id)}>שכפל</button>
+              <button className="btn danger sm" onClick={() => deleteBlock(selected.id)}>מחק</button>
+            </div>
+
+            <FrameFields
+              frame={selected.frame}
+              onChange={(f) => updateBlockById(selected.id, (b) => ({ ...b, frame: clampFrame(f) }))}
+            />
+
+            <BlockEditor
+              block={selected}
+              onChange={(nb) => updateBlockById(selected.id, nb)}
+            />
+          </div>
+        )}
+
+        {isEditMode && !selected && blocks.length > 0 && (
+          <p className="canvas-hint">
+            לחץ על רכיב כדי לבחור ולעצב אותו · גרור להזזה · משוך מהפינות לשינוי גודל ·
+            לחיצה כפולה על טקסט פותחת כתיבה
+          </p>
+        )}
+
+        {mode === 'preview' && (
+          <p className="canvas-hint">מצב תצוגה — התשובות הנכונות מסומנות. הלומדים לא רואים אותן.</p>
+        )}
       </div>
 
-      <SlideNav total={course.slides.length} current={index} onGo={setIndex} />
+      <SlideNav
+        total={course.slides.length}
+        current={index}
+        onGo={(i) => {
+          setIndex(i)
+          setSelectedId(null)
+          setEditingId(null)
+        }}
+      />
 
       {settingsOpen && (
         <SettingsModal
@@ -233,6 +365,30 @@ export default function Editor() {
           courseId={id}
         />
       )}
+    </div>
+  )
+}
+
+/** מיקום וגודל מדויקים ביחידות הבמה (1000 × 562) */
+function FrameFields({ frame, onChange }) {
+  const f = (key, label) => (
+    <label className="sp-mini" key={key}>
+      {label}
+      <input
+        type="number"
+        value={frame[key]}
+        onChange={(e) => onChange({ ...frame, [key]: Number(e.target.value) || 0 })}
+      />
+    </label>
+  )
+  return (
+    <div className="sp-row" style={{ marginBottom: 12 }}>
+      <span className="sp-label">מיקום וגודל</span>
+      {f('x', 'ימין')}
+      {f('y', 'למעלה')}
+      {f('w', 'רוחב')}
+      {f('h', 'גובה')}
+      <span className="tiny muted">מתוך {CANVAS_W}×{Math.round(CANVAS_H)}</span>
     </div>
   )
 }

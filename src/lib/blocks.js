@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { defaultStyle, defaultBox } from './typography'
+import { defaultFrame } from './canvas'
 
 export const newId = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -71,12 +72,20 @@ export const blockTypeList = Object.entries(BLOCK_TYPES).map(([key, def]) => ({
 
 // תפריט ה"הוסף" בעורך. ארבע רמות הטקסט הן אותו סוג בלוק בווריאנטים
 // שונים, ולכן הן מופיעות כאן כארבע כניסות נפרדות ונוחות.
+const insert = (kind, badge, label, build) => ({
+  key: kind,
+  badge,
+  label,
+  // n = כמה רכיבים כבר יש בשקופית, כדי להסיט את החדש ולא לערום
+  make: (n = 0) => ({ ...build(), frame: defaultFrame(kind.split(':').pop(), n) }),
+})
+
 export const INSERT_MENU = [
-  { key: 'text:title', badge: 'H1', label: 'כותרת ראשית', make: () => BLOCK_TYPES.text.create('title') },
-  { key: 'text:subtitle', badge: 'H2', label: 'כותרת משנה', make: () => BLOCK_TYPES.text.create('subtitle') },
-  { key: 'text:body', badge: 'T', label: 'טקסט', make: () => BLOCK_TYPES.text.create('body') },
-  { key: 'text:caption', badge: 't', label: 'טקסט משני', make: () => BLOCK_TYPES.text.create('caption') },
-  { key: 'question', badge: '❓', label: 'שאלה אמריקאית', make: () => BLOCK_TYPES.question.create() },
+  insert('text:title', 'H1', 'כותרת ראשית', () => BLOCK_TYPES.text.create('title')),
+  insert('text:subtitle', 'H2', 'כותרת משנה', () => BLOCK_TYPES.text.create('subtitle')),
+  insert('text:body', 'T', 'טקסט', () => BLOCK_TYPES.text.create('body')),
+  insert('text:caption', 't', 'טקסט משני', () => BLOCK_TYPES.text.create('caption')),
+  insert('question', '❓', 'שאלה אמריקאית', () => BLOCK_TYPES.question.create()),
 ]
 
 export const createSlide = (index = 0) => ({

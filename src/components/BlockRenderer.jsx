@@ -1,25 +1,26 @@
-import { textCss, boxCss, normalizeTextBlock } from '../lib/typography'
+import { textCss, normalizeTextBlock } from '../lib/typography'
 
 /**
- * מציג בלוק תוכן ללומד.
- * showKey=true מסמן את התשובה הנכונה — לשימוש המרצה בתצוגה מקדימה בלבד.
+ * מציג את תוכן הרכיב בלבד — בלי מסגרת, מילוי או מיקום.
+ * העטיפה (CanvasBlock בעריכה, StaticBlock בתצוגה) אחראית לעיצוב
+ * התיבה ולמיקום שלה על הבמה.
+ *
+ * showKey=true מסמן את התשובה הנכונה — למרצה בתצוגה מקדימה בלבד.
  */
 export default function BlockRenderer({ block, answer, onAnswer, showKey = false }) {
   if (block.type === 'text') {
     const b = normalizeTextBlock(block)
     const Tag = b.variant === 'title' ? 'h2' : b.variant === 'subtitle' ? 'h3' : 'div'
     return (
-      <div className="block" style={boxCss(b.box)}>
-        <Tag className="text-content" style={{ ...textCss(b.style), margin: 0 }}>
-          {b.content}
-        </Tag>
-      </div>
+      <Tag className="text-content" style={{ ...textCss(b.style), margin: 0 }}>
+        {b.content}
+      </Tag>
     )
   }
 
   if (block.type === 'question') {
     return (
-      <div className="block">
+      <div className="q-block">
         <div className="q-prompt">{block.prompt || '(שאלה ללא ניסוח)'}</div>
         <div className="q-options">
           {block.options.map((opt) => {
@@ -29,9 +30,7 @@ export default function BlockRenderer({ block, answer, onAnswer, showKey = false
               <label
                 key={opt.id}
                 className={
-                  'q-option' +
-                  (selected ? ' selected' : '') +
-                  (isKey ? ' key-correct' : '')
+                  'q-option' + (selected ? ' selected' : '') + (isKey ? ' key-correct' : '')
                 }
               >
                 <input
@@ -54,8 +53,8 @@ export default function BlockRenderer({ block, answer, onAnswer, showKey = false
   }
 
   return (
-    <div className="block muted tiny">
-      סוג בלוק לא מוכר: <code>{block.type}</code>
+    <div className="muted tiny">
+      סוג רכיב לא מוכר: <code>{block.type}</code>
     </div>
   )
 }

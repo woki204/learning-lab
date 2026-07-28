@@ -387,25 +387,138 @@ textarea {
   overflow-y: auto;
   padding: 30px 20px calc(var(--nav-h) + 30px);
 }
-.slide {
-  max-width: 860px;
+/* ───────── במת השקופית ───────── */
+.canvas-outer {
+  position: relative;
+  direction: ltr;
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
   background: var(--surface);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
-  padding: 38px 42px;
-  min-height: 340px;
+  overflow: hidden;
 }
-.slide > h2.slide-title {
-  font-size: 27px;
-  margin-bottom: 22px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid var(--brand-soft);
+.canvas-outer.editable {
+  outline: 1px solid var(--line);
 }
-.slide-empty {
-  color: var(--ink-faint);
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.cblock {
+  position: absolute;
+  box-sizing: border-box;
+}
+.cblock-inner {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.cblock-content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.cblock-textarea {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  resize: none;
+  overflow: auto;
+}
+.cblock-textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* מצב עריכה: גרירה, בחירה וידיות */
+.canvas-outer.editable .cblock {
+  cursor: move;
+}
+.canvas-outer.editable .cblock:not(.editing) .cblock-content {
+  pointer-events: none;
+  user-select: none;
+}
+.canvas-outer.editable .cblock:hover .cblock-inner {
+  outline: 1px dashed var(--ink-faint);
+  outline-offset: 1px;
+}
+.cblock-outline {
+  position: absolute;
+  inset: -1px;
+  border: 2px solid var(--brand);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.cblock.editing {
+  cursor: text;
+}
+.cblock.editing .cblock-inner {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.cblock-handle {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border: 2px solid var(--brand);
+  border-radius: 2px;
+  z-index: 3;
+}
+
+.canvas-hint {
+  max-width: 1000px;
+  margin: 12px auto 0;
   text-align: center;
-  padding: 60px 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+/* סרגל הכלים של העורך */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.slide-title-input {
+  width: 180px;
+  padding: 5px 9px;
+  font-size: 14px;
+}
+
+/* לוח המאפיינים של הרכיב הנבחר */
+.inspector {
+  max-width: 1000px;
+  margin: 16px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.inspector-head .spacer {
+  flex: 1;
 }
 
 /* ───────── סרגל הניווט התחתון ───────── */
