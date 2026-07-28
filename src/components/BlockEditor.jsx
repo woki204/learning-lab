@@ -1,4 +1,28 @@
 import { BLOCK_TYPES, newId } from '../lib/blocks'
+import { VARIANTS, textCss, boxCss, normalizeTextBlock } from '../lib/typography'
+import TextStylePanel from './TextStylePanel'
+
+/**
+ * עריכת תיבת טקסט. שדה הכתיבה עצמו נצבע בעיצוב שנבחר, כך שמה
+ * שנראה בעורך הוא מה שהלומד יראה.
+ */
+function TextBlockEditor({ block, onChange }) {
+  return (
+    <>
+      <TextStylePanel block={block} onChange={onChange} />
+      <div className="text-preview-wrap" style={boxCss(block.box)}>
+        <textarea
+          className="text-preview"
+          value={block.content}
+          onChange={(e) => onChange({ ...block, content: e.target.value })}
+          placeholder={`הקלד ${VARIANTS[block.variant].label}…`}
+          rows={block.variant === 'title' || block.variant === 'subtitle' ? 2 : 5}
+          style={textCss(block.style)}
+        />
+      </div>
+    </>
+  )
+}
 
 export default function BlockEditor({ block, onChange, onDelete, onMove, isFirst, isLast }) {
   const def = BLOCK_TYPES[block.type]
@@ -8,7 +32,11 @@ export default function BlockEditor({ block, onChange, onDelete, onMove, isFirst
     <div className="editor-block">
       <header>
         <span>{def?.icon}</span>
-        <strong>{def?.label ?? block.type}</strong>
+        <strong>
+          {block.type === 'text'
+            ? VARIANTS[block.variant ?? 'body'].label
+            : (def?.label ?? block.type)}
+        </strong>
         <span className="spacer" />
         <button className="icon-btn" onClick={() => onMove(-1)} disabled={isFirst} title="העלה">
           ▲
@@ -22,24 +50,7 @@ export default function BlockEditor({ block, onChange, onDelete, onMove, isFirst
       </header>
 
       {block.type === 'text' && (
-        <>
-          <label className="field">
-            <span>כותרת (לא חובה)</span>
-            <input
-              type="text"
-              value={block.heading}
-              onChange={(e) => set({ heading: e.target.value })}
-            />
-          </label>
-          <label className="field" style={{ marginBottom: 0 }}>
-            <span>תוכן</span>
-            <textarea
-              value={block.body}
-              onChange={(e) => set({ body: e.target.value })}
-              rows={5}
-            />
-          </label>
-        </>
+        <TextBlockEditor block={normalizeTextBlock(block)} onChange={onChange} />
       )}
 
       {block.type === 'question' && (

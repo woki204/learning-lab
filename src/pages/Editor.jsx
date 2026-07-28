@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCourse, saveCourse } from '../lib/db'
-import { BLOCK_TYPES, blockTypeList, createSlide } from '../lib/blocks'
+import { INSERT_MENU, createSlide } from '../lib/blocks'
 import { learnLink } from '../lib/links'
 import SlideNav from '../components/SlideNav'
 import BlockEditor from '../components/BlockEditor'
@@ -105,8 +105,8 @@ export default function Editor() {
   }
 
   // ── פעולות על בלוקים ──
-  const addBlock = (typeKey) =>
-    patchSlide(index, (s) => ({ ...s, blocks: [...s.blocks, BLOCK_TYPES[typeKey].create()] }))
+  const addBlock = (menuItem) =>
+    patchSlide(index, (s) => ({ ...s, blocks: [...s.blocks, menuItem.make()] }))
   const updateBlock = (bi, block) =>
     patchSlide(index, (s) => ({ ...s, blocks: s.blocks.map((b, i) => (i === bi ? block : b)) }))
   const deleteBlock = (bi) =>
@@ -190,10 +190,10 @@ export default function Editor() {
               ))}
 
               <div className="add-menu">
-                <span className="tiny muted" style={{ alignSelf: 'center' }}>הוסף כלי:</span>
-                {blockTypeList.map((t) => (
-                  <button key={t.key} className="btn subtle sm" onClick={() => addBlock(t.key)}>
-                    {t.icon} {t.label}
+                <span className="tiny muted" style={{ alignSelf: 'center' }}>הוסף:</span>
+                {INSERT_MENU.map((t) => (
+                  <button key={t.key} className="btn subtle sm" onClick={() => addBlock(t)}>
+                    <span className="ins-badge">{t.badge}</span> {t.label}
                   </button>
                 ))}
                 <span className="spacer" style={{ flex: 1 }} />

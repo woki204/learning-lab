@@ -12,19 +12,23 @@
 //    grade(b,a) – מחזיר { correct, points, max, answerText } לפי תשובת הלומד
 // ─────────────────────────────────────────────────────────────
 
+import { defaultStyle, defaultBox } from './typography'
+
 export const newId = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
 export const BLOCK_TYPES = {
   text: {
-    label: 'טקסט',
+    label: 'תיבת טקסט',
     icon: '📝',
     gradable: false,
-    create: () => ({
+    create: (variant = 'body') => ({
       id: newId(),
       type: 'text',
-      heading: '',
-      body: '',
+      variant,
+      content: '',
+      style: defaultStyle(variant),
+      box: defaultBox(),
     }),
   },
 
@@ -64,6 +68,16 @@ export const blockTypeList = Object.entries(BLOCK_TYPES).map(([key, def]) => ({
   key,
   ...def,
 }))
+
+// תפריט ה"הוסף" בעורך. ארבע רמות הטקסט הן אותו סוג בלוק בווריאנטים
+// שונים, ולכן הן מופיעות כאן כארבע כניסות נפרדות ונוחות.
+export const INSERT_MENU = [
+  { key: 'text:title', badge: 'H1', label: 'כותרת ראשית', make: () => BLOCK_TYPES.text.create('title') },
+  { key: 'text:subtitle', badge: 'H2', label: 'כותרת משנה', make: () => BLOCK_TYPES.text.create('subtitle') },
+  { key: 'text:body', badge: 'T', label: 'טקסט', make: () => BLOCK_TYPES.text.create('body') },
+  { key: 'text:caption', badge: 't', label: 'טקסט משני', make: () => BLOCK_TYPES.text.create('caption') },
+  { key: 'question', badge: '❓', label: 'שאלה אמריקאית', make: () => BLOCK_TYPES.question.create() },
+]
 
 export const createSlide = (index = 0) => ({
   id: newId(),

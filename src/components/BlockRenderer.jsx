@@ -1,13 +1,18 @@
+import { textCss, boxCss, normalizeTextBlock } from '../lib/typography'
+
 /**
  * מציג בלוק תוכן ללומד.
  * showKey=true מסמן את התשובה הנכונה — לשימוש המרצה בתצוגה מקדימה בלבד.
  */
 export default function BlockRenderer({ block, answer, onAnswer, showKey = false }) {
   if (block.type === 'text') {
+    const b = normalizeTextBlock(block)
+    const Tag = b.variant === 'title' ? 'h2' : b.variant === 'subtitle' ? 'h3' : 'div'
     return (
-      <div className="block block-text">
-        {block.heading && <h3>{block.heading}</h3>}
-        {block.body && <div className="body">{block.body}</div>}
+      <div className="block" style={boxCss(b.box)}>
+        <Tag className="text-content" style={{ ...textCss(b.style), margin: 0 }}>
+          {b.content}
+        </Tag>
       </div>
     )
   }

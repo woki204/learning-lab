@@ -558,6 +558,145 @@ textarea {
   font-size: 15px;
 }
 
+.text-content {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* ───────── לוח העיצוב של תיבת טקסט ───────── */
+.style-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.sp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sp-row + .sp-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.sp-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.sp-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin: 0 2px;
+}
+.sp-mini {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.sp-mini input[type='number'] {
+  width: 62px;
+  padding: 5px 7px;
+  font-size: 14px;
+}
+.sp-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sp-check input {
+  width: auto;
+  accent-color: var(--brand);
+}
+.style-panel select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+.color-input {
+  width: 34px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  flex: none;
+}
+
+.chips {
+  display: flex;
+  gap: 3px;
+}
+.chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+}
+.chip:hover:not(.active) {
+  background: var(--brand-soft);
+  border-color: var(--brand-soft);
+  color: var(--brand-dark);
+}
+.chip.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.chip.sq {
+  width: 32px;
+  padding: 5px 0;
+  text-align: center;
+}
+
+.text-preview-wrap {
+  border-radius: var(--r-sm);
+}
+textarea.text-preview {
+  border: 1px dashed var(--line);
+  background: transparent;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+}
+textarea.text-preview:focus {
+  border-style: solid;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.ins-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* ───────── העורך ───────── */
 .editor-block {
   border: 1px solid var(--line);
