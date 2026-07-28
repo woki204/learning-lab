@@ -27,6 +27,11 @@ export const isFirebaseConfigured = !firebaseConfig.apiKey.startsWith('PASTE_')
 // ─────────────────────────────────────────────────────────────
 export const USERS_COL = 'll_users'
 export const COURSES_COL = 'll_courses'
+export const META_COL = 'll_meta'
+
+// מסמך נעילה חד-פעמי: קיומו מעיד שמנהל המערכת הראשון כבר נוצר,
+// וחוסם את עמוד ההקמה מלרוץ שוב.
+export const BOOTSTRAP_DOC = 'bootstrap'
 
 const app = getApps()[0] ?? initializeApp(firebaseConfig)
 

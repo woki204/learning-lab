@@ -22,11 +22,27 @@ function llIsAdmin() {
     && get(/databases/$(database)/documents/ll_users/$(request.auth.uid)).data.role == 'admin';
 }
 
-// ── 2. פרופילי המרצים והמנהלים ───────────────────────────────
+// ── 2. נעילת ההקמה + פרופילי המרצים והמנהלים ─────────────────
+
+match /ll_meta/{docId} {
+  allow read: if true;
+  // ניתן ליצור פעם אחת בלבד — קיום המסמך נועל את עמוד ההקמה לתמיד.
+  allow create: if llSignedIn()
+    && !exists(/databases/$(database)/documents/ll_meta/bootstrap);
+  allow update, delete: if false;
+}
 
 match /ll_users/{uid} {
   allow read: if llSignedIn() && (request.auth.uid == uid || llIsAdmin());
-  allow create, delete: if llIsAdmin();
+  allow delete: if llIsAdmin();
+
+  // יצירה: על ידי מנהל, או — פעם אחת, לפני שהנעילה נכתבה —
+  // על ידי המשתמש הראשון שמקים את עצמו כמנהל דרך עמוד /setup.
+  allow create: if llIsAdmin()
+    || (llSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'admin'
+        && !exists(/databases/$(database)/documents/ll_meta/bootstrap));
   allow update: if llIsAdmin()
     || (request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys()

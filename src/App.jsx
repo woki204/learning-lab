@@ -7,6 +7,7 @@ import Editor from './pages/Editor'
 import Learn from './pages/Learn'
 import Admin from './pages/Admin'
 import Account from './pages/Account'
+import Setup from './pages/Setup'
 
 function Guard({ children, adminOnly = false }) {
   const { user, profile, loading, isAdmin } = useAuth()
@@ -42,6 +43,9 @@ export default function App() {
           <Route path="/learn/:id" element={<Learn />} />
 
           <Route path="/login" element={<RedirectIfLoggedIn><Login /></RedirectIfLoggedIn>} />
+
+          {/* הקמה חד-פעמית של מנהל המערכת הראשון */}
+          <Route path="/setup" element={<Setup />} />
 
           {/* העורך תופס מסך מלא ולכן אינו עטוף ב-Layout */}
           <Route path="/edit/:id" element={<Guard><Editor /></Guard>} />

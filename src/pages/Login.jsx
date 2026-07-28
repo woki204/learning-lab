@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { isFirebaseConfigured } from '../lib/firebase'
 
@@ -70,6 +70,8 @@ export default function Login() {
 
         <p className="tiny muted" style={{ textAlign: 'center', marginTop: 18, marginBottom: 0 }}>
           לומדים אינם נדרשים להתחבר — הם נכנסים דרך הקישור שקיבלו מהמרצה.
+          <br />
+          <Link to="/setup">הפעלה ראשונה של המערכת</Link>
         </p>
       </form>
     </div>
