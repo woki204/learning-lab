@@ -2346,6 +2346,97 @@ textarea {
   background: var(--ok);
 }
 
+.source-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.src-tab {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 18px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+.src-tab .tiny {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.src-tab:hover {
+  border-color: var(--brand-soft);
+}
+.src-tab.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.how-to {
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.how-to h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+.how-to ol {
+  margin: 0 0 14px;
+  padding-inline-start: 22px;
+  line-height: 1.9;
+  font-size: 14px;
+}
+.how-to code {
+  padding: 1px 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.how-to-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.spec-table {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.spec-table code {
+  font-family: var(--font-mono);
+  color: var(--brand-dark);
+}
+
+.validation-errors {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+}
+.validation-errors h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #a53030;
+}
+.validation-errors ul {
+  margin: 0 0 10px;
+  padding-inline-start: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
 .drop-zone {
   padding: 56px 24px;
   text-align: center;

@@ -6,6 +6,13 @@ import { parseUnit, summarize } from '../lib/importParser'
 import { buildCourse } from '../lib/importBuilder'
 import { processImageFile, ACCEPTED_TYPES } from '../lib/media'
 import { addMedia, createCourseFrom } from '../lib/db'
+import {
+  BLOCK_SPEC,
+  EXAMPLE,
+  conversionPrompt,
+  validateTemplate,
+  templateToDoc,
+} from '../lib/template'
 import Layout from '../components/Layout'
 
 const STEPS = ['העלאת המסמך', 'סקירת המבנה', 'החומרים החסרים', 'יצירת היחידה']
@@ -23,7 +30,55 @@ export default function Import() {
   const [assets, setAssets] = useState({}) // assetId → {mediaId} | {url,start}
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [source, setSource] = useState('template')
+  const [errors, setErrors] = useState([])
+  const [copied, setCopied] = useState(false)
+  const [showSpec, setShowSpec] = useState(false)
   const fileRef = useRef(null)
+  const jsonRef = useRef(null)
+
+  const copyPrompt = async () => {
+    await navigator.clipboard.writeText(conversionPrompt())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  const downloadExample = () => {
+    const blob = new Blob([JSON.stringify(EXAMPLE, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'תבנית-יחידה-לדוגמה.json'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  /** העלאת קובץ תבנית: קוראים, בודקים תקינות, ורק אז ממירים */
+  const onJson = async (file) => {
+    setError('')
+    setErrors([])
+    setBusy('בודק את הקובץ…')
+    try {
+      const text = await file.text()
+      let json
+      try {
+        json = JSON.parse(text)
+      } catch (e) {
+        setError(`הקובץ אינו JSON תקין: ${e.message}`)
+        return
+      }
+      const problems = validateTemplate(json)
+      if (problems.length) {
+        setErrors(problems)
+        return
+      }
+      setDoc(templateToDoc(json))
+      setStep(1)
+    } finally {
+      setBusy('')
+    }
+  }
 
   const onFile = async (file) => {
     setError('')
@@ -102,29 +157,134 @@ export default function Import() {
       {busy && <div className="alert ok">{busy}</div>}
 
       {step === 0 && (
-        <div
-          className="drop-zone"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault()
-            if (e.dataTransfer.files?.[0]) onFile(e.dataTransfer.files[0])
-          }}
-        >
-          <p style={{ fontSize: 42, margin: 0 }}>📄</p>
-          <h3>גררו לכאן מסמך פיתוח, או בחרו קובץ</h3>
-          <p className="muted">
-            קובץ Word ‏(.docx) שבנוי לפי התבנית: <strong>מסך 1</strong>, <strong>תוכן גלוי
-            לתלמידים</strong>, <strong>פעילות</strong>, <strong>משוב</strong>.
-          </p>
-          <button className="btn" onClick={() => fileRef.current?.click()}>בחירת קובץ</button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".docx"
-            hidden
-            onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-          />
-        </div>
+        <>
+          <div className="source-tabs">
+            <button
+              className={'src-tab' + (source === 'template' ? ' active' : '')}
+              onClick={() => setSource('template')}
+            >
+              📋 קובץ תבנית
+              <span className="tiny">הדרך המומלצת — עובד עם כל פורמט מקור</span>
+            </button>
+            <button
+              className={'src-tab' + (source === 'docx' ? ' active' : '')}
+              onClick={() => setSource('docx')}
+            >
+              📄 מסמך Word
+              <span className="tiny">ניתוח ישיר של מסמך פיתוח בתבנית מט״ח</span>
+            </button>
+          </div>
+
+          {source === 'template' ? (
+            <>
+              <div className="how-to">
+                <h3>איך זה עובד</h3>
+                <ol>
+                  <li>
+                    <strong>מעתיקים את הפרומפט</strong> ומדביקים אותו במודל שפה כלשהו,
+                    יחד עם היחידה שכתבתם — בכל פורמט: Word, מצגת, טקסט חופשי.
+                  </li>
+                  <li>
+                    <strong>מקבלים קובץ JSON</strong> ושומרים אותו במחשב בסיומת
+                    <code>.json</code>.
+                  </li>
+                  <li><strong>מעלים אותו כאן</strong> והמערכת בונה את היחידה.</li>
+                </ol>
+                <div className="how-to-actions">
+                  <button className="btn" onClick={copyPrompt}>
+                    {copied ? '✓ הועתק' : '📋 העתקת הפרומפט'}
+                  </button>
+                  <button className="btn subtle" onClick={downloadExample}>
+                    ⬇ הורדת תבנית לדוגמה
+                  </button>
+                  <button className="btn ghost" onClick={() => setShowSpec((v) => !v)}>
+                    {showSpec ? 'הסתר את מבנה התבנית' : 'הצג את מבנה התבנית'}
+                  </button>
+                </div>
+
+                {showSpec && (
+                  <table className="data spec-table">
+                    <thead>
+                      <tr><th>type</th><th>מה זה</th><th>שדות</th></tr>
+                    </thead>
+                    <tbody>
+                      {BLOCK_SPEC.map((b) => (
+                        <tr key={b.type}>
+                          <td><code>{b.type}</code></td>
+                          <td>{b.desc}</td>
+                          <td className="tiny">{b.fields}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div
+                className="drop-zone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  if (e.dataTransfer.files?.[0]) onJson(e.dataTransfer.files[0])
+                }}
+              >
+                <p style={{ fontSize: 38, margin: 0 }}>📋</p>
+                <h3>גררו לכאן את קובץ התבנית שמילאתם</h3>
+                <button className="btn" onClick={() => jsonRef.current?.click()}>
+                  בחירת קובץ JSON
+                </button>
+                <input
+                  ref={jsonRef}
+                  type="file"
+                  accept=".json,application/json"
+                  hidden
+                  onChange={(e) => e.target.files?.[0] && onJson(e.target.files[0])}
+                />
+              </div>
+            </>
+          ) : (
+            <div
+              className="drop-zone"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                if (e.dataTransfer.files?.[0]) onFile(e.dataTransfer.files[0])
+              }}
+            >
+              <p style={{ fontSize: 42, margin: 0 }}>📄</p>
+              <h3>גררו לכאן מסמך פיתוח, או בחרו קובץ</h3>
+              <p className="muted">
+                קובץ Word ‏(.docx) שבנוי לפי התבנית: <strong>מסך 1</strong>,{' '}
+                <strong>תוכן גלוי לתלמידים</strong>, <strong>פעילות</strong>,{' '}
+                <strong>משוב</strong>.
+              </p>
+              <button className="btn" onClick={() => fileRef.current?.click()}>בחירת קובץ</button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".docx"
+                hidden
+                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+              />
+            </div>
+          )}
+
+          {errors.length > 0 && (
+            <div className="validation-errors">
+              <h3>הקובץ לא תקין — {errors.length} שגיאות</h3>
+              <ul>
+                {errors.slice(0, 25).map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+              {errors.length > 25 && (
+                <p className="tiny muted">ועוד {errors.length - 25} שגיאות…</p>
+              )}
+              <p className="tiny muted">
+                תקנו את הקובץ ונסו שוב. אפשר גם להחזיר את השגיאות האלה למודל השפה
+                ולבקש ממנו לתקן.
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {step === 1 && doc && (
@@ -186,8 +346,8 @@ export default function Import() {
           </div>
 
           <div className="wizard-actions">
-            <button className="btn ghost" onClick={() => { setDoc(null); setStep(0) }}>
-              מסמך אחר
+            <button className="btn ghost" onClick={() => { setDoc(null); setErrors([]); setStep(0) }}>
+              קובץ אחר
             </button>
             <button className="btn" onClick={() => setStep(2)}>
               {allAssets.length ? `המשך — ${allAssets.length} חומרים` : 'המשך'}

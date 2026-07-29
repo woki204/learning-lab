@@ -23,6 +23,9 @@ function heightOf(item) {
 
 function rawHeight(item) {
   switch (item.kind) {
+    case 'reveal': return item.mode === 'popup' ? 150 : 190
+    case 'tabs': return 120 + (item.items?.length ? lines(item.items[0].body, 80) * 24 : 60)
+    case 'check': return 48
     case 'title': return 58
     case 'subtitle': return 46
     case 'text': return lines(item.text, 95) * 27 + 16
@@ -106,6 +109,30 @@ function makeBlock(item, assetMap) {
     return { ...b, frame }
   }
 
+  if (item.kind === 'reveal') {
+    const b = BLOCK_TYPES.reveal.create(item.mode ?? 'inline')
+    b.front = item.front ?? ''
+    b.title = item.title ?? ''
+    b.body = item.body ?? ''
+    b.credit = item.credit ?? ''
+    return { ...b, frame }
+  }
+
+  if (item.kind === 'tabs') {
+    const b = BLOCK_TYPES.tabs.create()
+    b.items = (item.items ?? []).map((t) => ({
+      id: newId(), label: t.label ?? '', body: t.body ?? '',
+    }))
+    if (b.items.length === 0) b.items = [{ id: newId(), label: 'לשונית 1', body: '' }]
+    return { ...b, frame }
+  }
+
+  if (item.kind === 'check') {
+    const b = BLOCK_TYPES.check.create()
+    b.label = item.label ?? 'בדיקה'
+    return { ...b, frame: { ...frame, h: 48 } }
+  }
+
   if (item.kind === 'activity') return makeActivity(item, frame)
   return null
 }
@@ -185,9 +212,12 @@ export function buildCourse(doc, assetMap = {}) {
   const slides = []
 
   doc.screens.forEach((screen, si) => {
-    // הנכסים הופכים לפריטי מדיה שנכנסים לרצף התוכן
+    // נכסים שכבר יושבים ברצף התוכן (מסלול התבנית) נשארים במקומם;
+    // רק נכסים שזוהו בנפרד (מסלול Word) נוספים בסוף.
     const items = [...screen.items]
+    const placed = new Set(items.filter((i) => i.assetId).map((i) => i.assetId))
     screen.assets.forEach((a) => {
+      if (placed.has(a.id)) return
       items.push({ kind: 'media', mediaKind: a.kind, hint: a.hint, url: a.url, assetId: a.id })
     })
 
@@ -195,9 +225,11 @@ export function buildCourse(doc, assetMap = {}) {
     slide.title = screen.title || `שלב ${screen.number ?? si + 1}`
     let y = TOP
     let hasQuestion = false
+    let hasCheck = false
 
     const push = () => {
-      if (hasQuestion) {
+      // כפתור בדיקה נוסף רק אם יש שאלות ואין כבר כפתור מהתבנית
+      if (hasQuestion && !hasCheck) {
         const chk = BLOCK_TYPES.check.create()
         slides.push({
           ...slide,
@@ -210,7 +242,10 @@ export function buildCourse(doc, assetMap = {}) {
       const block = makeBlock(item, assetMap)
       if (!block) return
       const h = block.frame.h
-      const reserve = GRADABLE.has(item.qtype) || hasQuestion ? 62 : 0
+      // שומרים מקום לכפתור בדיקה שיתווסף בסוף — אבל לא כשמניחים
+      // את הכפתור עצמו, אחרת הוא נדחף לשקופית ריקה משלו.
+      const reserve =
+        item.kind === 'check' ? 0 : GRADABLE.has(item.qtype) || hasQuestion ? 62 : 0
 
       if (y + h > BOTTOM - reserve && slide.blocks.length > 0) {
         push()
@@ -218,11 +253,13 @@ export function buildCourse(doc, assetMap = {}) {
         slide.title = `${screen.title || `שלב ${screen.number ?? si + 1}`} (המשך)`
         y = TOP
         hasQuestion = false
+        hasCheck = false
       }
 
       slide.blocks.push({ ...block, frame: { ...block.frame, y } })
       y += h + GAP
       if (item.kind === 'activity' && GRADABLE.has(item.qtype)) hasQuestion = true
+      if (item.kind === 'check') hasCheck = true
     })
 
     if (slide.blocks.length > 0) push()
