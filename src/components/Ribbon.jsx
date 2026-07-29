@@ -51,6 +51,14 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
               />
             </label>
           )}
+          <label className="tb-inline">
+            <input
+              type="checkbox"
+              checked={!!block.shuffle}
+              onChange={(e) => onChange({ ...block, shuffle: e.target.checked })}
+            />
+            ערבב
+          </label>
           <span className="tiny muted">{block.options?.length ?? 0} תשובות · {block.points ?? 1} נק'</span>
         </>
       )}
@@ -78,6 +86,14 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
             />
             ניקוד חלקי
           </label>
+          <label className="tb-inline">
+            <input
+              type="checkbox"
+              checked={!!block.shuffle}
+              onChange={(e) => onChange({ ...block, shuffle: e.target.checked })}
+            />
+            ערבב
+          </label>
           <span className="tiny muted">
             {block.options?.filter((o) => o.correct).length ?? 0} נכונות · {block.points ?? 1} נק'
           </span>
@@ -94,12 +110,95 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
 
       {block.type === 'sort' && (
         <>
-          <span className="tb-label">🗂 מיון לקבוצות</span>
-          <button className="btn sm" onClick={onEditContent}>✏️ ערוך קבוצות וכרטיסים</button>
+          <span className="tb-label">🗂 מיון</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <select
+            className="tb-select"
+            style={{ width: 140 }}
+            value={block.mode ?? 'board'}
+            onChange={(e) => onChange({ ...block, mode: e.target.value })}
+            title="איך הכרטיסים מוגשים"
+          >
+            <option value="board">כל הכרטיסים יחד</option>
+            <option value="sequence">אחד בכל פעם</option>
+          </select>
+          <ShuffleToggle block={block} onChange={onChange} />
           <span className="tiny muted">
-            {block.groups?.length ?? 0} קבוצות · {block.cards?.length ?? 0} כרטיסים ·{' '}
-            {block.points ?? 1} נק'
+            {block.groups?.length ?? 0} קבוצות · {block.cards?.length ?? 0} כרטיסים
           </span>
+        </>
+      )}
+
+      {block.type === 'match' && (
+        <>
+          <span className="tb-label">🔗 התאמה</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך זוגות</button>
+          <ShuffleToggle block={block} onChange={onChange} />
+          <span className="tiny muted">{block.pairs?.length ?? 0} זוגות · {block.points ?? 1} נק'</span>
+        </>
+      )}
+
+      {block.type === 'audio' && (
+        <>
+          <span className="tb-label">🎧 שמע</span>
+          <input
+            className="tb-input"
+            style={{ width: 280 }}
+            type="text"
+            value={block.url ?? ''}
+            placeholder="קישור לקובץ שמע (mp3, m4a…)"
+            onChange={(e) => onChange({ ...block, url: e.target.value })}
+          />
+          <input
+            className="tb-input"
+            style={{ width: 150 }}
+            type="text"
+            value={block.title ?? ''}
+            placeholder="כותרת (לא חובה)"
+            onChange={(e) => onChange({ ...block, title: e.target.value })}
+          />
+        </>
+      )}
+
+      {block.type === 'gallery' && (
+        <>
+          <span className="tb-label">🖼️ גלריה</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תמונות</button>
+          <select
+            className="tb-select"
+            style={{ width: 150 }}
+            value={block.mode ?? 'sequence'}
+            onChange={(e) => onChange({ ...block, mode: e.target.value })}
+          >
+            <option value="sequence">אחת אחרי השנייה</option>
+            <option value="strip">כולן יחד</option>
+          </select>
+          <span className="tiny muted">{block.items?.length ?? 0} תמונות</span>
+        </>
+      )}
+
+      {block.type === 'reveal' && (
+        <>
+          <span className="tb-label">🎴 חשיפה</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <select
+            className="tb-select"
+            style={{ width: 130 }}
+            value={block.mode ?? 'inline'}
+            onChange={(e) => onChange({ ...block, mode: e.target.value })}
+          >
+            <option value="inline">נפתח במקום</option>
+            <option value="popup">נפתח בחלון</option>
+          </select>
+        </>
+      )}
+
+      {block.type === 'tabs' && (
+        <>
+          <span className="tb-label">🗄 לשוניות</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך לשוניות</button>
+          <BoxPopover block={block} onChange={onChange} />
+          <span className="tiny muted">{block.items?.length ?? 0} לשוניות</span>
         </>
       )}
 
@@ -290,6 +389,14 @@ function TextTools({ block, onChange }) {
       </button>
 
       <BoxPopover block={block} onChange={onChange} />
+
+      <Popover label="מילה חמה" title="הוספת הסבר למילה בתוך הטקסט" width={280}>
+        <div className="pop-note">
+          כתבו בתוך הטקסט:
+          <code>((מרפסת|גזוזטרה היא מרפסת))</code>
+          המילה תוצג מודגשת, ובלחיצה עליה ייפתח ההסבר.
+        </div>
+      </Popover>
     </>
   )
 }
@@ -310,6 +417,14 @@ function ImageTools({ block, onChange }) {
         <option value="fill">נמתחת</option>
       </select>
       <BoxPopover block={block} onChange={onChange} />
+      <label className="tb-inline" title="לחיצה על התמונה תפתח אותה במסך מלא">
+        <input
+          type="checkbox"
+          checked={block.zoomable !== false}
+          onChange={(e) => onChange({ ...block, zoomable: e.target.checked })}
+        />
+        ניתנת להגדלה
+      </label>
       <input
         className="tb-input"
         style={{ width: 150 }}
@@ -335,8 +450,31 @@ function VideoTools({ block, onChange }) {
         placeholder="הדבק קישור: יוטיוב, Vimeo או קובץ וידאו"
         onChange={(e) => onChange({ ...block, url: e.target.value })}
       />
+      <label className="tb-inline" title="השנייה שממנה יתחיל הסרטון">
+        מתחיל בשנייה
+        <input
+          className="tb-input num"
+          type="number"
+          min="0"
+          value={block.start ?? 0}
+          onChange={(e) => onChange({ ...block, start: Number(e.target.value) || 0 })}
+        />
+      </label>
       <BoxPopover block={block} onChange={onChange} />
     </>
+  )
+}
+
+function ShuffleToggle({ block, onChange }) {
+  return (
+    <label className="tb-inline" title="סדר אקראי, כדי שלא יזוהה דפוס קבוע">
+      <input
+        type="checkbox"
+        checked={block.shuffle !== false}
+        onChange={(e) => onChange({ ...block, shuffle: e.target.checked })}
+      />
+      ערבב סדר
+    </label>
   )
 }
 

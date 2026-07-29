@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { textCss, normalizeTextBlock } from '../lib/typography'
 import { useMedia } from '../lib/mediaContext'
 import { useRuntime } from '../lib/runtime'
 import { parseCloze, clozeBlankCorrect, CALLOUT_TONES, BLOCK_TYPES } from '../lib/blocks'
+import { parseGlossary, hasGlossary, stableShuffle } from '../lib/inline'
 import { videoEmbed } from '../lib/video'
+import GlossaryTerm from './GlossaryTerm'
+import Lightbox from './Lightbox'
 
 /**
  * מציג את תוכן הרכיב בלבד — בלי מסגרת, מילוי או מיקום.
@@ -24,6 +27,16 @@ export default function BlockRenderer({ block }) {
       return <MultiView block={block} />
     case 'cloze':
       return <ClozeView block={block} />
+    case 'audio':
+      return <AudioView block={block} />
+    case 'gallery':
+      return <GalleryView block={block} />
+    case 'reveal':
+      return <RevealView block={block} />
+    case 'tabs':
+      return <TabsView block={block} />
+    case 'match':
+      return <MatchView block={block} />
     case 'sort':
       return <SortView block={block} />
     case 'open':
@@ -49,14 +62,29 @@ function TextView({ block }) {
   const Tag = block.variant === 'title' ? 'h2' : block.variant === 'subtitle' ? 'h3' : 'div'
   return (
     <Tag className="text-content" style={{ ...textCss(block.style), margin: 0 }}>
-      {block.content}
+      <RichText text={block.content} />
     </Tag>
+  )
+}
+
+/** טקסט שעשוי לכלול "מילים חמות" בסימון ((מילה|הסבר)) */
+function RichText({ text }) {
+  if (!hasGlossary(text)) return text ?? ''
+  return parseGlossary(text).map((p, i) =>
+    p.kind === 'text' ? (
+      <span key={i}>{p.text}</span>
+    ) : (
+      <GlossaryTerm key={i} term={p.term} definition={p.definition} />
+    ),
   )
 }
 
 function ImageView({ block }) {
   const media = useMedia()
+  const { interactive } = useRuntime()
+  const [zoom, setZoom] = useState(false)
   const item = media[block.mediaId]
+
   if (!item)
     return (
       <div className="media-placeholder">
@@ -64,19 +92,282 @@ function ImageView({ block }) {
         <span className="tiny">גרור תמונה מהמאגר</span>
       </div>
     )
+
+  const canZoom = block.zoomable !== false && interactive
   return (
-    <img
-      className="image-block"
-      src={item.dataUrl}
-      alt={block.alt || item.name || ''}
-      style={{ objectFit: block.fit ?? 'contain' }}
-      draggable={false}
-    />
+    <>
+      <img
+        className={'image-block' + (canZoom ? ' zoomable' : '')}
+        src={item.dataUrl}
+        alt={block.alt || item.name || ''}
+        style={{ objectFit: block.fit ?? 'contain' }}
+        draggable={false}
+        onClick={() => canZoom && setZoom(true)}
+        title={canZoom ? 'לחצו להגדלה' : undefined}
+      />
+      {zoom && (
+        <Lightbox
+          src={item.dataUrl}
+          alt={block.alt}
+          caption={block.alt}
+          onClose={() => setZoom(false)}
+        />
+      )}
+    </>
+  )
+}
+
+function AudioView({ block }) {
+  if (!block.url)
+    return (
+      <div className="media-placeholder">
+        <span>🎧</span>
+        <span className="tiny">הדבק קישור לקובץ שמע בסרגל</span>
+      </div>
+    )
+  return (
+    <div className="audio-block">
+      {block.title && <div className="audio-title">🎧 {block.title}</div>}
+      <audio src={block.url} controls preload="none" />
+    </div>
+  )
+}
+
+function GalleryView({ block }) {
+  const media = useMedia()
+  const { interactive } = useRuntime()
+  const [shown, setShown] = useState(1)
+  const [zoom, setZoom] = useState(null)
+  const items = (block.items ?? []).filter((it) => media[it.mediaId])
+
+  if (items.length === 0)
+    return (
+      <div className="media-placeholder">
+        <span>🖼️</span>
+        <span className="tiny">הוסף תמונות לגלריה בסרגל</span>
+      </div>
+    )
+
+  const sequence = block.mode === 'sequence'
+  const visible = sequence ? items.slice(0, shown) : items
+
+  return (
+    <div className="gallery-block">
+      <div className="gallery-strip">
+        {visible.map((it) => (
+          <figure key={it.id} className="gallery-item" onClick={() => interactive && setZoom(it)}>
+            <img src={media[it.mediaId].dataUrl} alt={it.caption ?? ''} draggable={false} />
+            {it.caption && <figcaption>{it.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+
+      {sequence && interactive && (
+        <div className="gallery-controls">
+          <button
+            className="btn sm"
+            onClick={() => setShown((n) => Math.min(items.length, n + 1))}
+            disabled={shown >= items.length}
+          >
+            התמונה הבאה
+          </button>
+          <span className="tiny muted">{Math.min(shown, items.length)} מתוך {items.length}</span>
+          {shown > 1 && (
+            <button className="btn ghost sm" onClick={() => setShown(1)}>מהתחלה</button>
+          )}
+        </div>
+      )}
+
+      {zoom && (
+        <Lightbox
+          src={media[zoom.mediaId].dataUrl}
+          alt={zoom.caption}
+          caption={zoom.caption}
+          onClose={() => setZoom(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function RevealView({ block }) {
+  const { interactive } = useRuntime()
+  const media = useMedia()
+  const [open, setOpen] = useState(false)
+  const item = media[block.mediaId]
+
+  const body = (
+    <>
+      {item && <img className="reveal-image" src={item.dataUrl} alt="" draggable={false} />}
+      {block.title && <strong className="reveal-title">{block.title}</strong>}
+      <div className="reveal-body">
+        <RichText text={block.body} />
+      </div>
+      {block.credit && <div className="reveal-credit tiny muted">{block.credit}</div>}
+    </>
+  )
+
+  if (block.mode === 'popup') {
+    return (
+      <>
+        <button
+          className="reveal-card"
+          onClick={() => interactive && setOpen(true)}
+          disabled={!interactive}
+        >
+          <span className="reveal-front">
+            <RichText text={block.front} />
+          </span>
+          <span className="reveal-hint tiny">לחצו להרחבה ↗</span>
+        </button>
+        {open && (
+          <div className="modal-back" onClick={() => setOpen(false)}>
+            <div className="modal reveal-modal" onClick={(e) => e.stopPropagation()}>
+              {body}
+              <div className="modal-actions">
+                <button className="btn" onClick={() => setOpen(false)}>סגירה</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <div className="reveal-inline">
+      {block.front && (
+        <div className="reveal-front">
+          <RichText text={block.front} />
+        </div>
+      )}
+      {open ? (
+        <div className="reveal-opened">{body}</div>
+      ) : (
+        <button className="btn" onClick={() => setOpen(true)} disabled={!interactive}>
+          {block.buttonLabel || 'גלו את התשובה'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+function TabsView({ block }) {
+  const items = block.items ?? []
+  const [active, setActive] = useState(0)
+  if (items.length === 0) return <div className="muted tiny">הוסיפו לשוניות בסרגל.</div>
+  const current = items[Math.min(active, items.length - 1)]
+
+  return (
+    <div className="tabs-block">
+      <div className="tabs-head" role="tablist">
+        {items.map((it, i) => (
+          <button
+            key={it.id}
+            role="tab"
+            aria-selected={i === active}
+            className={'tab-btn' + (i === active ? ' active' : '')}
+            onClick={() => setActive(i)}
+          >
+            {it.label || `לשונית ${i + 1}`}
+          </button>
+        ))}
+      </div>
+      <div className="tabs-body">
+        <RichText text={current.body} />
+      </div>
+    </div>
+  )
+}
+
+function MatchView({ block }) {
+  const { answers, setAnswer, checked, showKey, interactive } = useRuntime()
+  const linked = answers[block.id] ?? {}
+  const [pick, setPick] = useState(null)
+  const pairs = block.pairs ?? []
+
+  // הטור הימני מעורבב, אחרת ההתאמה הנכונה היא פשוט שורה מול שורה
+  const rights = useMemo(
+    () => (block.shuffle === false ? pairs : stableShuffle(pairs, block.id)),
+    [pairs, block.shuffle, block.id],
+  )
+
+  const usedBy = (rightId) => pairs.find((p) => linked[p.id] === rightId)
+  const link = (leftId, rightId) => {
+    if (!interactive || checked) return
+    const next = { ...linked }
+    // ביטול התאמה קודמת של אותו פריט ימני
+    Object.keys(next).forEach((k) => next[k] === rightId && delete next[k])
+    next[leftId] = rightId
+    setAnswer(block.id, next)
+    setPick(null)
+  }
+
+  const numOf = (leftId) => pairs.findIndex((p) => p.id === leftId) + 1
+
+  return (
+    <div className="q-block match-block">
+      {block.prompt && <div className="q-prompt">{block.prompt}</div>}
+
+      <div className="match-cols">
+        <div className="match-col">
+          {pairs.map((p) => {
+            const state = checked ? (linked[p.id] === p.id ? 'right' : 'wrong') : null
+            return (
+              <button
+                key={p.id}
+                className={
+                  'match-item' +
+                  (pick === p.id ? ' picked' : '') +
+                  (linked[p.id] ? ' linked' : '') +
+                  (state ? ' ' + state : '')
+                }
+                onClick={() => interactive && !checked && setPick(pick === p.id ? null : p.id)}
+              >
+                <span className="match-num">{numOf(p.id)}</span>
+                <span>{p.left}</span>
+                {state && <Mark state={state} />}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="match-col">
+          {rights.map((p) => {
+            const owner = usedBy(p.id)
+            const state = checked && owner ? (owner.id === p.id ? 'right' : 'wrong') : null
+            return (
+              <button
+                key={p.id}
+                className={
+                  'match-item' +
+                  (owner ? ' linked' : '') +
+                  (showKey ? ' key' : '') +
+                  (state ? ' ' + state : '')
+                }
+                onClick={() => pick && link(pick, p.id)}
+              >
+                {owner && <span className="match-num">{numOf(owner.id)}</span>}
+                <span>{p.right}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {interactive && !checked && (
+        <p className="tiny muted match-hint">
+          {pick ? 'עכשיו לחצו על הפריט המתאים בטור השני' : 'לחצו על פריט בטור הראשון'}
+        </p>
+      )}
+
+      <Feedback block={block} />
+    </div>
   )
 }
 
 function VideoView({ block }) {
-  const embed = videoEmbed(block.url)
+  const embed = videoEmbed(block.url, block.start)
   if (!embed)
     return (
       <div className="media-placeholder">
@@ -107,6 +398,7 @@ function ChoiceView({ block }) {
   const { answers, setAnswer, checked, showKey, interactive } = useRuntime()
   const answer = answers[block.id]
   const cards = block.display === 'cards'
+  const options = useShuffledOptions(block)
 
   return (
     <div className="q-block">
@@ -115,7 +407,7 @@ function ChoiceView({ block }) {
         className={cards ? 'q-cards' : 'q-options'}
         style={cards ? { gridTemplateColumns: `repeat(${block.columns || 2}, 1fr)` } : undefined}
       >
-        {block.options.map((opt) => {
+        {options.map((opt) => {
           const selected = answer === opt.id
           const isKey = block.correctId === opt.id
           // בסקר עמדה אין נכון ושגוי — רק סימון מה נבחר
@@ -157,9 +449,18 @@ function ChoiceView({ block }) {
   )
 }
 
+/** מערבב את האפשרויות אם המרצה ביקש. הסדר יציב לאורך השלב. */
+function useShuffledOptions(block) {
+  return useMemo(
+    () => (block.shuffle ? stableShuffle(block.options ?? [], block.id) : (block.options ?? [])),
+    [block.options, block.shuffle, block.id],
+  )
+}
+
 function MultiView({ block }) {
   const { answers, setAnswer, checked, showKey, interactive } = useRuntime()
   const picked = Array.isArray(answers[block.id]) ? answers[block.id] : []
+  const options = useShuffledOptions(block)
 
   const toggle = (id) =>
     setAnswer(block.id, picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id])
@@ -171,7 +472,7 @@ function MultiView({ block }) {
         className="q-options"
         style={{ display: 'grid', gridTemplateColumns: `repeat(${block.columns || 1}, 1fr)` }}
       >
-        {block.options.map((opt) => {
+        {options.map((opt) => {
           const selected = picked.includes(opt.id)
           const state = checked
             ? opt.correct && selected
@@ -301,7 +602,64 @@ function SortView({ block }) {
     setHold(null)
   }
 
-  const tray = cards.filter((c) => !placed[c.id])
+  // בסדרה הכרטיסים מוגשים אחד אחרי השני, כדי שכרטיס ארוך יהיה קריא
+  const ordered = useMemo(
+    () => (block.shuffle === false ? cards : stableShuffle(cards, block.id)),
+    [cards, block.shuffle, block.id],
+  )
+  const tray = ordered.filter((c) => !placed[c.id])
+
+  if (block.mode === 'sequence') {
+    const current = tray[0]
+    const done = cards.length - tray.length
+    return (
+      <div className="q-block sort-block sequence">
+        {block.prompt && <div className="q-prompt">{block.prompt}</div>}
+
+        <div className="seq-progress tiny muted">
+          כרטיס {Math.min(done + 1, cards.length)} מתוך {cards.length}
+        </div>
+
+        {current ? (
+          <div className="seq-card">{current.text}</div>
+        ) : (
+          <div className="seq-card done">כל הכרטיסים מוינו ✓</div>
+        )}
+
+        <div className="seq-zones" style={{ gridTemplateColumns: `repeat(${groups.length || 1}, 1fr)` }}>
+          {groups.map((g) => (
+            <button
+              key={g.id}
+              className="seq-zone"
+              disabled={!current || !interactive || checked}
+              onClick={() => current && put(current.id, g.id)}
+            >
+              <strong>{g.label}</strong>
+              {g.description && <span className="tiny muted">{g.description}</span>}
+              <span className="tiny seq-count">
+                {cards.filter((c) => placed[c.id] === g.id).length} כרטיסים
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {checked && (
+          <div className="seq-review">
+            {cards.map((c) => (
+              <span
+                key={c.id}
+                className={'sort-card ' + (placed[c.id] === c.groupId ? 'right' : 'wrong')}
+              >
+                {c.text}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <Feedback block={block} />
+      </div>
+    )
+  }
 
   const Card = ({ card, inGroup }) => {
     const state = checked ? (placed[card.id] === card.groupId ? 'right' : 'wrong') : null

@@ -1,6 +1,7 @@
 import { newId, parseCloze } from '../lib/blocks'
 import { useMedia } from '../lib/mediaContext'
 
+
 /**
  * עורך התוכן של רכיב, לסוגים שהתוכן שלהם גדול מכדי לשבת בסרגל
  * הכלים. טקסט נערך ישירות על הבמה ולכן אינו כאן.
@@ -13,7 +14,278 @@ export default function BlockEditor({ block, onChange }) {
   if (block.type === 'open') return <OpenEditor block={block} onChange={onChange} />
   if (block.type === 'tool') return <ToolEditor block={block} onChange={onChange} />
   if (block.type === 'source') return <SourceEditor block={block} onChange={onChange} />
+  if (block.type === 'match') return <MatchEditor block={block} onChange={onChange} />
+  if (block.type === 'gallery') return <GalleryEditor block={block} onChange={onChange} />
+  if (block.type === 'reveal') return <RevealEditor block={block} onChange={onChange} />
+  if (block.type === 'tabs') return <TabsEditor block={block} onChange={onChange} />
   return <p className="muted tiny">אין עורך תוכן נפרד לסוג הרכיב הזה.</p>
+}
+
+/** תזכורת לתחביר "מילה חמה", לשדות שתומכים בו */
+function GlossaryHint() {
+  return (
+    <div className="alert ok tiny">
+      אפשר לשלב <strong>מילה חמה</strong>: כתבו <code>((מרפסת|גזוזטרה היא מרפסת))</code> והמילה
+      תוצג מודגשת, עם הסבר שנפתח בלחיצה.
+    </div>
+  )
+}
+
+function MatchEditor({ block, onChange }) {
+  const set = (patch) => onChange({ ...block, ...patch })
+  const pairs = block.pairs ?? []
+  const setPair = (id, patch) =>
+    set({ pairs: pairs.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
+
+  return (
+    <>
+      <label className="field">
+        <span>הוראת ההתאמה</span>
+        <input
+          type="text"
+          value={block.prompt}
+          placeholder="למשל: התאימו כל טענה לתיקון שלה"
+          onChange={(e) => set({ prompt: e.target.value })}
+        />
+      </label>
+
+      <div className="field">
+        <span>הזוגות ({pairs.length}) — כל שורה היא התאמה נכונה</span>
+        {pairs.map((p, i) => (
+          <div className="opt-row" key={p.id}>
+            <span className="group-num">{i + 1}</span>
+            <input
+              type="text"
+              value={p.left}
+              placeholder="טור ראשון"
+              onChange={(e) => setPair(p.id, { left: e.target.value })}
+            />
+            <span className="match-arrow">←</span>
+            <input
+              type="text"
+              value={p.right}
+              placeholder="טור שני"
+              onChange={(e) => setPair(p.id, { right: e.target.value })}
+            />
+            <button
+              className="icon-btn"
+              disabled={pairs.length <= 2}
+              onClick={() => set({ pairs: pairs.filter((x) => x.id !== p.id) })}
+              title="הסר זוג"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <button
+          className="btn subtle sm"
+          onClick={() => set({ pairs: [...pairs, { id: newId(), left: '', right: '' }] })}
+        >
+          + הוסף זוג
+        </button>
+      </div>
+
+      <div className="alert ok tiny">
+        הטור השני יוצג ללומד בסדר מעורבב, כך שההתאמה לא תהיה שורה מול שורה.
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+        <Points block={block} set={set} label="ניקוד לכל ההתאמה" />
+      </div>
+      <FeedbackFields block={block} set={set} />
+    </>
+  )
+}
+
+function GalleryEditor({ block, onChange }) {
+  const media = useMedia()
+  const list = Object.values(media)
+  const set = (patch) => onChange({ ...block, ...patch })
+  const items = block.items ?? []
+  const setItem = (id, patch) =>
+    set({ items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) })
+  const move = (i, d) => {
+    const to = i + d
+    if (to < 0 || to >= items.length) return
+    const arr = [...items]
+    ;[arr[i], arr[to]] = [arr[to], arr[i]]
+    set({ items: arr })
+  }
+
+  return (
+    <>
+      <div className="field">
+        <span>התמונות בגלריה ({items.length}) — לפי הסדר שיוצגו</span>
+        {items.map((it, i) => (
+          <div className="opt-row" key={it.id}>
+            <span className="group-num">{i + 1}</span>
+            <select
+              value={it.mediaId ?? ''}
+              onChange={(e) => setItem(it.id, { mediaId: e.target.value || null })}
+              style={{ width: 150 }}
+            >
+              <option value="">— בחר תמונה —</option>
+              {list.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={it.caption ?? ''}
+              placeholder="כיתוב (לא חובה)"
+              onChange={(e) => setItem(it.id, { caption: e.target.value })}
+            />
+            <button className="icon-btn" onClick={() => move(i, -1)} disabled={i === 0} title="הקדם">▲</button>
+            <button className="icon-btn" onClick={() => move(i, 1)} disabled={i === items.length - 1} title="אחר">▼</button>
+            <button
+              className="icon-btn"
+              onClick={() => set({ items: items.filter((x) => x.id !== it.id) })}
+              title="הסר"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <button
+          className="btn subtle sm"
+          onClick={() => set({ items: [...items, { id: newId(), mediaId: null, caption: '' }] })}
+        >
+          + הוסף תמונה
+        </button>
+      </div>
+
+      {list.length === 0 && (
+        <div className="alert warn tiny">
+          עדיין אין תמונות במאגר. העלה תמונות בקטגוריית "תמונות" שברצועה.
+        </div>
+      )}
+    </>
+  )
+}
+
+function RevealEditor({ block, onChange }) {
+  const media = useMedia()
+  const list = Object.values(media)
+  const set = (patch) => onChange({ ...block, ...patch })
+
+  return (
+    <>
+      <label className="field">
+        <span>מה שרואים לפני החשיפה</span>
+        <textarea
+          rows={2}
+          value={block.front ?? ''}
+          placeholder="למשל: מצרים העתיקה — או השאלה עצמה"
+          onChange={(e) => set({ front: e.target.value })}
+        />
+      </label>
+
+      {block.mode !== 'popup' && (
+        <label className="field">
+          <span>כיתוב הכפתור</span>
+          <input
+            type="text"
+            value={block.buttonLabel ?? ''}
+            onChange={(e) => set({ buttonLabel: e.target.value })}
+          />
+        </label>
+      )}
+
+      <label className="field">
+        <span>כותרת התוכן הנחשף</span>
+        <input
+          type="text"
+          value={block.title ?? ''}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+      </label>
+
+      <label className="field">
+        <span>התוכן הנחשף</span>
+        <textarea
+          rows={5}
+          value={block.body ?? ''}
+          onChange={(e) => set({ body: e.target.value })}
+        />
+      </label>
+
+      <GlossaryHint />
+
+      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+        <label className="field" style={{ width: 190, marginBottom: 0 }}>
+          <span>תמונה (לא חובה)</span>
+          <select
+            value={block.mediaId ?? ''}
+            onChange={(e) => set({ mediaId: e.target.value || null })}
+          >
+            <option value="">ללא תמונה</option>
+            {list.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="field" style={{ flex: 1, marginBottom: 0 }}>
+          <span>קרדיט / מקור התמונה</span>
+          <input
+            type="text"
+            value={block.credit ?? ''}
+            onChange={(e) => set({ credit: e.target.value })}
+          />
+        </label>
+      </div>
+    </>
+  )
+}
+
+function TabsEditor({ block, onChange }) {
+  const set = (patch) => onChange({ ...block, ...patch })
+  const items = block.items ?? []
+  const setItem = (id, patch) =>
+    set({ items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) })
+
+  return (
+    <>
+      <div className="field">
+        <span>הלשוניות ({items.length})</span>
+        {items.map((it, i) => (
+          <div className="opt-block" key={it.id}>
+            <div className="opt-row">
+              <span className="group-num">{i + 1}</span>
+              <input
+                type="text"
+                value={it.label}
+                placeholder="שם הלשונית"
+                onChange={(e) => setItem(it.id, { label: e.target.value })}
+              />
+              <button
+                className="icon-btn"
+                disabled={items.length <= 1}
+                onClick={() => set({ items: items.filter((x) => x.id !== it.id) })}
+                title="הסר לשונית"
+              >
+                ✕
+              </button>
+            </div>
+            <textarea
+              rows={3}
+              value={it.body ?? ''}
+              placeholder="תוכן הלשונית"
+              onChange={(e) => setItem(it.id, { body: e.target.value })}
+            />
+          </div>
+        ))}
+        <button
+          className="btn subtle sm"
+          onClick={() =>
+            set({ items: [...items, { id: newId(), label: `לשונית ${items.length + 1}`, body: '' }] })
+          }
+        >
+          + הוסף לשונית
+        </button>
+      </div>
+      <GlossaryHint />
+    </>
+  )
 }
 
 /** שדות המשוב שנחשפים ללומד אחרי הבדיקה */

@@ -112,6 +112,7 @@ export const BLOCK_TYPES = {
       fit: 'contain', // contain = נכנסת שלמה, cover = ממלאת וחותכת
       box: { ...defaultBox(), radius: 8 },
       alt: '',
+      zoomable: true, // לחיצה פותחת את התמונה במסך מלא
     }),
   },
 
@@ -123,6 +124,7 @@ export const BLOCK_TYPES = {
       id: newId(),
       type: 'video',
       url: '',
+      start: 0, // שנייה שממנה מתחילה ההפעלה
       box: { ...defaultBox(), radius: 10 },
     }),
   },
@@ -142,6 +144,7 @@ export const BLOCK_TYPES = {
         { id: newId(), text: '', mediaId: null, feedback: '' },
       ],
       correctId: null,
+      shuffle: false,
       points: 1,
       explanation: '',
       poll: false, // סקר עמדה: כל בחירה מתקבלת, בלי נכון ושגוי
@@ -179,6 +182,7 @@ export const BLOCK_TYPES = {
         { id: newId(), text: '', correct: false },
         { id: newId(), text: '', correct: false },
       ],
+      shuffle: false,
       points: 2,
       partial: true, // ניקוד חלקי לפי כמה סומנו נכון
       explanation: '',
@@ -261,6 +265,8 @@ export const BLOCK_TYPES = {
         { id: newId(), label: 'קבוצה ב', description: '' },
       ],
       cards: [],
+      mode: 'board', // board = כל הכרטיסים יחד, sequence = אחד בכל פעם
+      shuffle: true,
       points: 4,
       explanation: '',
       ...feedbackFields(),
@@ -352,6 +358,107 @@ export const BLOCK_TYPES = {
     }),
   },
 
+  match: {
+    label: 'התאמה בין טורים',
+    icon: '🔗',
+    gradable: true,
+    create: () => ({
+      id: newId(),
+      type: 'match',
+      prompt: '',
+      pairs: [
+        { id: newId(), left: '', right: '' },
+        { id: newId(), left: '', right: '' },
+      ],
+      points: 3,
+      shuffle: true,
+      explanation: '',
+      ...feedbackFields(),
+    }),
+    grade: (block, answer) => {
+      const linked = answer ?? {} // { pairId: rightPairId }
+      const pairs = block.pairs ?? []
+      const max = block.points || 1
+      if (pairs.length === 0)
+        return { correct: true, points: max, max, question: block.prompt, answerText: '' }
+
+      const hits = pairs.filter((p) => linked[p.id] === p.id).length
+      const points = (hits / pairs.length) * max
+      const rightOf = (id) => pairs.find((p) => p.id === id)?.right ?? '—'
+
+      return {
+        correct: hits === pairs.length,
+        points: Math.round(points * 100) / 100,
+        max,
+        question: block.prompt,
+        answerText:
+          pairs
+            .filter((p) => linked[p.id])
+            .map((p) => `${p.left} ← ${rightOf(linked[p.id])}`)
+            .join(' · ') || '— לא הותאם —',
+        correctText: pairs.map((p) => `${p.left} ← ${p.right}`).join(' · '),
+      }
+    },
+  },
+
+  audio: {
+    label: 'שמע / הסכת',
+    icon: '🎧',
+    gradable: false,
+    create: () => ({
+      id: newId(),
+      type: 'audio',
+      url: '',
+      title: '',
+      box: { ...defaultBox(), radius: 10 },
+    }),
+  },
+
+  gallery: {
+    label: 'גלריית תמונות',
+    icon: '🖼️',
+    gradable: false,
+    create: () => ({
+      id: newId(),
+      type: 'gallery',
+      items: [], // { id, mediaId, caption }
+      mode: 'sequence', // sequence = אחת אחרי השנייה, strip = כולן יחד
+      box: { ...defaultBox(), radius: 8 },
+    }),
+  },
+
+  reveal: {
+    label: 'חשיפה בלחיצה',
+    icon: '🎴',
+    gradable: false,
+    create: (mode = 'inline') => ({
+      id: newId(),
+      type: 'reveal',
+      mode, // inline = נפתח במקום, popup = נפתח בחלון
+      front: '',
+      title: '',
+      body: '',
+      mediaId: null,
+      credit: '',
+      buttonLabel: 'גלו את התשובה',
+    }),
+  },
+
+  tabs: {
+    label: 'לשוניות',
+    icon: '🗄',
+    gradable: false,
+    create: () => ({
+      id: newId(),
+      type: 'tabs',
+      items: [
+        { id: newId(), label: 'לשונית 1', body: '' },
+        { id: newId(), label: 'לשונית 2', body: '' },
+      ],
+      box: { ...defaultBox(), bordered: true, radius: 10 },
+    }),
+  },
+
   check: {
     label: 'כפתור בדיקה',
     icon: '✅',
@@ -393,12 +500,15 @@ export const QUESTION_INSERTS = [
   insert('multi', '☑️', 'בחירה מרובה', () => BLOCK_TYPES.multi.create()),
   insert('cloze', '✍️', 'השלמת מילים', () => BLOCK_TYPES.cloze.create()),
   insert('sort', '🗂', 'מיון לקבוצות', () => BLOCK_TYPES.sort.create()),
+  insert('match', '🔗', 'התאמה בין טורים', () => BLOCK_TYPES.match.create()),
   insert('open', '🖊', 'שאלה פתוחה', () => BLOCK_TYPES.open.create()),
   insert('check', '✅', 'כפתור בדיקה', () => BLOCK_TYPES.check.create()),
 ]
 
 export const MEDIA_INSERTS = [
   insert('video', '🎬', 'וידאו', () => BLOCK_TYPES.video.create()),
+  insert('audio', '🎧', 'שמע / הסכת', () => BLOCK_TYPES.audio.create()),
+  insert('gallery', '🖼️', 'גלריית תמונות', () => BLOCK_TYPES.gallery.create()),
 ]
 
 export const CARD_INSERTS = [
@@ -407,6 +517,9 @@ export const CARD_INSERTS = [
   ),
   insert('tool', '🧭', 'כרטיס כלי', () => BLOCK_TYPES.tool.create()),
   insert('source', '📰', 'כרטיס מקור', () => BLOCK_TYPES.source.create()),
+  insert('reveal', '🎴', 'חשיפה בלחיצה', () => BLOCK_TYPES.reveal.create('inline')),
+  insert('reveal:popup', '🪟', 'כרטיס נפתח בחלון', () => BLOCK_TYPES.reveal.create('popup')),
+  insert('tabs', '🗄', 'לשוניות', () => BLOCK_TYPES.tabs.create()),
 ]
 
 export const INSERT_MENU = [
