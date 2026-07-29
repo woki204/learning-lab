@@ -2298,6 +2298,241 @@ textarea {
   accent-color: var(--accent);
   flex: none;
 }
+/* ───────── אשף ההמרה ───────── */
+.wizard-steps {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.wizard-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+.wizard-steps li.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+.wizard-steps li.done {
+  color: var(--ok);
+  border-color: var(--ok-soft);
+  background: var(--ok-soft);
+}
+.wz-num {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: currentColor;
+  color: #fff;
+  font-size: 11px;
+}
+.wizard-steps li.active .wz-num {
+  background: var(--brand);
+}
+.wizard-steps li.done .wz-num {
+  background: var(--ok);
+}
+
+.drop-zone {
+  padding: 56px 24px;
+  text-align: center;
+  border: 2px dashed var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.drop-zone h3 {
+  margin: 10px 0 6px;
+}
+.drop-zone .muted {
+  max-width: 460px;
+  margin: 0 auto 18px;
+  font-size: 14px;
+}
+
+.stat-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.stat {
+  flex: 1 1 120px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat strong {
+  font-size: 24px;
+  color: var(--brand-dark);
+}
+.stat span {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.stat.warn strong {
+  color: var(--warn);
+}
+.stat.ok strong {
+  color: var(--ok);
+}
+
+.screens-review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.screen-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.screen-card > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.screen-card > header .spacer {
+  flex: 1;
+}
+.screen-num {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px 12px;
+}
+.item-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--surface-2);
+}
+.item-list li:last-child {
+  border-bottom: 0;
+}
+.item-list li.warn .item-text {
+  color: var(--warn);
+}
+.item-list li.asset .item-text {
+  color: var(--ink-soft);
+}
+.item-kind {
+  flex: none;
+  min-width: 86px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.item-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.screen-card .alert {
+  margin: 0 14px 10px;
+}
+
+.add-asset {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px 12px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+
+.asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.asset-row {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.asset-row.done {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+.asset-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+.asset-ok {
+  color: var(--ok);
+  font-size: 13px;
+  font-weight: 700;
+}
+.asset-hint {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.asset-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.asset-input input[type='text'] {
+  flex: 1;
+  min-width: 220px;
+}
+.asset-preview {
+  width: 70px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 /* ───────── טבלה ───────── */
 table.data {
   width: 100%;

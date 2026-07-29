@@ -46,6 +46,9 @@ export default function Dashboard() {
       <div className="page-head">
         <h1>הסביבות שלי</h1>
         <span className="spacer" />
+        <button className="btn subtle" onClick={() => navigate('/import')}>
+          📄 המרה ממסמך פיתוח
+        </button>
         <button className="btn" onClick={create}>+ סביבת למידה חדשה</button>
       </div>
 

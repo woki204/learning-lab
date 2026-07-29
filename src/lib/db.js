@@ -42,6 +42,18 @@ export async function newCourse(profile) {
   return ref.id
 }
 
+/** יוצר סביבה מוכנה — לשימוש אשף ההמרה ממסמך פיתוח */
+export async function createCourseFrom(profile, course) {
+  const ref = await addDoc(coursesRef, {
+    ...course,
+    ownerUid: profile.id,
+    ownerName: profile.displayName || profile.username,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
 export async function saveCourse(id, data) {
   const { id: _drop, createdAt: _drop2, ...clean } = data
   await updateDoc(doc(db, COURSES_COL, id), {

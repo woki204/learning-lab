@@ -7,6 +7,7 @@ import Editor from './pages/Editor'
 import Learn from './pages/Learn'
 import Admin from './pages/Admin'
 import Account from './pages/Account'
+import Import from './pages/Import'
 import Setup from './pages/Setup'
 
 function Guard({ children, adminOnly = false }) {
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/edit/:id" element={<Guard><Editor /></Guard>} />
 
           <Route path="/" element={<Guard><Layout><Dashboard /></Layout></Guard>} />
+          <Route path="/import" element={<Guard><Import /></Guard>} />
           <Route path="/account" element={<Guard><Layout><Account /></Layout></Guard>} />
           <Route path="/admin" element={<Guard adminOnly><Layout><Admin /></Layout></Guard>} />
 
