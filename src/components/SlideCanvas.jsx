@@ -15,17 +15,20 @@ export default function SlideCanvas({
   onCanvasDrop,
   background,
   backgroundImage,
+  zoom = 1,
+  onFitScale,
   className = '',
 }) {
   const outerRef = useRef(null)
-  const [scale, setScale] = useState(0)
+  // fit = יחס ההקטנה שממלא את הרוחב הזמין; הזום מוכפל בו
+  const [fit, setFit] = useState(0)
 
   useLayoutEffect(() => {
-    const el = outerRef.current
+    const el = outerRef.current?.parentElement
     if (!el) return
     const measure = () => {
-      const w = el.clientWidth
-      if (w > 0) setScale(w / CANVAS_W)
+      const w = el.clientWidth - 40 // מרווח נשימה משני הצדדים
+      if (w > 0) setFit(w / CANVAS_W)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -38,11 +41,21 @@ export default function SlideCanvas({
     }
   }, [])
 
+  useLayoutEffect(() => {
+    if (fit > 0) onFitScale?.(fit)
+  }, [fit, onFitScale])
+
+  const scale = fit * zoom
+
   return (
     <div
       ref={outerRef}
       className={'canvas-outer ' + className}
-      style={{ height: scale ? CANVAS_H * scale : undefined }}
+      style={
+        scale
+          ? { width: CANVAS_W * scale, height: CANVAS_H * scale }
+          : undefined
+      }
     >
       {scale > 0 && (
         <div

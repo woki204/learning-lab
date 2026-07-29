@@ -9,6 +9,7 @@ import { MediaProvider } from '../lib/mediaContext'
 import MediaLibrary from '../components/MediaLibrary'
 import { learnLink } from '../lib/links'
 import SlideNav from '../components/SlideNav'
+import BottomBar from '../components/BottomBar'
 import SlideCanvas from '../components/SlideCanvas'
 import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
@@ -47,6 +48,8 @@ export default function Editor() {
   const [media, setMedia] = useState([])
   const [railTab, setRailTab] = useState('text')
   const [checked, setChecked] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [fitScale, setFitScale] = useState(1)
   const [answers, setAnswers] = useState({})
   const scaleRef = useRef(1)
 
@@ -178,6 +181,17 @@ export default function Editor() {
     setIndex(Math.max(0, index - 1))
     setSelectedId(null)
   }
+  /** גרירת ממוזערת למקום אחר ברצועה */
+  const reorderSlides = (from, to) => {
+    patch((c) => {
+      const slides = [...c.slides]
+      const [item] = slides.splice(from, 1)
+      slides.splice(to, 0, item)
+      return { ...c, slides }
+    })
+    setIndex(to)
+    setSelectedId(null)
+  }
   const moveSlide = (dir) => {
     const to = index + dir
     if (to < 0 || to >= course.slides.length) return
@@ -268,16 +282,30 @@ export default function Editor() {
     <div className="stage">
       <div className="stage-bar">
         <button
-          className="btn ghost sm"
+          className="top-btn"
           onClick={() => {
             if (dirty && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return
             navigate('/')
           }}
+          title="חזרה לרשימת הסביבות"
         >
-          → חזרה
+          🏠
         </button>
-        <span className="title">{course.title}</span>
-        {dirty && <span className="tiny" style={{ color: 'var(--warn)' }}>● לא נשמר</span>}
+
+        <span className="save-state">
+          {saving ? '☁ שומר…' : dirty ? '● לא נשמר' : '✓ נשמר'}
+        </span>
+
+        <span className="spacer" />
+
+        {/* שם היחידה נערך במקום, במרכז הסרגל */}
+        <input
+          className="unit-title"
+          value={course.title}
+          placeholder="יחידה ללא שם"
+          onChange={(e) => patch({ title: e.target.value })}
+          title="שם היחידה"
+        />
 
         <span className="spacer" />
 
@@ -299,8 +327,10 @@ export default function Editor() {
           ))}
         </div>
 
-        <button className="btn ghost sm" onClick={() => setSettingsOpen(true)}>⚙ הגדרות</button>
-        <button className="btn sm" onClick={save} disabled={saving || !dirty}>
+        <button className="top-btn" onClick={() => setSettingsOpen(true)} title="הגדרות היחידה">
+          ⚙
+        </button>
+        <button className="top-btn solid" onClick={save} disabled={saving || !dirty}>
           {saving ? 'שומר…' : 'שמור'}
         </button>
       </div>
@@ -358,11 +388,13 @@ export default function Editor() {
           </aside>
         )}
 
-        <div className="stage-body">
+        <div className={'stage-body' + (isEditMode ? '' : ' with-nav')}>
         <SlideCanvas
           className={isEditMode ? 'editable' : ''}
           background={slide.background}
           backgroundImage={mediaMap[slide.background?.mediaId]?.dataUrl}
+          zoom={isEditMode ? zoom : 1}
+          onFitScale={setFitScale}
           onBackgroundPointerDown={() => {
             setSelectedId(null)
             setEditingId(null)
@@ -410,7 +442,22 @@ export default function Editor() {
         </div>
       </div>
 
-      <SlideNav total={course.slides.length} current={index} onGo={goToSlide} />
+      {isEditMode ? (
+        <BottomBar
+          slides={course.slides}
+          index={index}
+          zoom={zoom}
+          fitScale={fitScale}
+          onZoom={setZoom}
+          onGo={goToSlide}
+          onAdd={addSlide}
+          onDuplicate={duplicateSlide}
+          onDelete={deleteSlide}
+          onReorder={reorderSlides}
+        />
+      ) : (
+        <SlideNav total={course.slides.length} current={index} onGo={goToSlide} />
+      )}
 
       {contentOpen && selected && (
         <div className="modal-back" onClick={() => setContentOpen(false)}>

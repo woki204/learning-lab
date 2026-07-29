@@ -135,7 +135,7 @@ export default function Learn() {
         <span className="muted tiny">{name}</span>
       </div>
 
-      <div className="stage-body">
+      <div className="stage-body with-nav">
         <SlideCanvas
           background={slide.background}
           backgroundImage={media[slide.background?.mediaId]?.dataUrl}
