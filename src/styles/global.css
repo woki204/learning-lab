@@ -2524,9 +2524,9 @@ textarea {
 }
 .item-list li {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 10px;
-  padding: 5px 0;
+  padding: 7px 0;
   font-size: 14px;
   border-bottom: 1px solid var(--surface-2);
 }
@@ -2550,11 +2550,27 @@ textarea {
   font-weight: 700;
   text-align: center;
 }
+/* מקצצים לשתי שורות עם שלוש נקודות אמיתיות, ולא חותכים באמצע
+   מילה. הטקסט עצמו נשמר במלואו — זו הצגה בלבד. */
 .item-text {
   flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.6;
+}
+.item-text.open {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: pre-wrap;
+}
+.item-list li.clickable .item-text {
+  cursor: pointer;
+}
+.item-list li.clickable .item-text:hover {
+  color: var(--brand-dark);
 }
 .screen-card .alert {
   margin: 0 14px 10px;

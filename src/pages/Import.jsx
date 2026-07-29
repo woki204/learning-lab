@@ -308,16 +308,15 @@ export default function Import() {
                 </header>
                 <ul className="item-list">
                   {s.items.map((it, i) => (
-                    <li key={i} className={it.needsReview ? 'warn' : ''}>
-                      <span className="item-kind">{kindLabel(it)}</span>
-                      <span className="item-text">{itemPreview(it)}</span>
-                    </li>
+                    <ReviewItem
+                      key={i}
+                      kind={kindLabel(it)}
+                      text={itemPreview(it)}
+                      warn={it.needsReview}
+                    />
                   ))}
                   {s.assets.map((a) => (
-                    <li key={a.id} className="asset">
-                      <span className="item-kind">{assetLabel(a.kind)}</span>
-                      <span className="item-text">{a.hint}</span>
-                    </li>
+                    <ReviewItem key={a.id} kind={assetLabel(a.kind)} text={a.hint} asset />
                   ))}
                 </ul>
                 {s.warnings.map((w, i) => (
@@ -395,6 +394,25 @@ export default function Import() {
         </div>
       )}
     </Layout>
+  )
+}
+
+/** שורת סקירה. הטקסט מקוצץ לשתי שורות; לחיצה פותחת אותו במלואו. */
+function ReviewItem({ kind, text, warn, asset }) {
+  const [open, setOpen] = useState(false)
+  const long = String(text ?? '').length > 110
+
+  return (
+    <li className={(warn ? 'warn ' : '') + (asset ? 'asset ' : '') + (long ? 'clickable' : '')}>
+      <span className="item-kind">{kind}</span>
+      <span
+        className={'item-text' + (open ? ' open' : '')}
+        onClick={() => long && setOpen((v) => !v)}
+        title={long && !open ? 'לחצו להצגת הטקסט המלא' : undefined}
+      >
+        {text}
+      </span>
+    </li>
   )
 }
 
@@ -497,13 +515,20 @@ const assetLabel = (k) => (k === 'image' ? '🖼 תמונה' : k === 'video' ? '
 const kindLabel = (it) =>
   it.kind === 'activity' ? (QTYPE_LABELS[it.qtype] ?? 'פעילות') : (KIND_LABELS[it.kind] ?? it.kind)
 
+/**
+ * הטקסט המלא של הפריט. לא חותכים כאן — הקיצוץ הוא ויזואלי בלבד
+ * (שתי שורות עם שלוש נקודות), ולחיצה פותחת את הכול.
+ */
 function itemPreview(it) {
   if (it.kind === 'activity') {
     const n = it.options?.length ?? 0
     return `${it.prompt || '(ללא ניסוח)'}${n ? ` — ${n} אפשרויות` : ''}`
   }
-  if (it.kind === 'tool') return it.name
-  if (it.kind === 'source') return it.publisher || it.excerpt?.slice(0, 60)
-  if (it.kind === 'callout') return `${it.label}: ${it.text?.slice(0, 70)}`
-  return it.text?.slice(0, 90)
+  if (it.kind === 'tool') return [it.name, ...(it.steps ?? [])].filter(Boolean).join(' · ')
+  if (it.kind === 'source') return [it.publisher, it.excerpt].filter(Boolean).join(' — ')
+  if (it.kind === 'callout') return `${it.label}: ${it.text ?? ''}`
+  if (it.kind === 'tabs') return (it.items ?? []).map((x) => x.label).join(' · ')
+  if (it.kind === 'reveal') return [it.front, it.body].filter(Boolean).join(' → ')
+  if (it.kind === 'check') return it.label ?? 'בדיקה'
+  return it.text ?? ''
 }

@@ -48,6 +48,18 @@ const CALLOUTS = [
   { match: 'שימו לב', tone: 'note', label: 'שימו לב' },
 ]
 
+/**
+ * מקצר טקסט לתצוגה בלבד — תמיד בגבול מילה, עם שלוש נקודות.
+ * התוכן עצמו נשמר במלואו; זה משמש רק לכותרות ולרמזים.
+ */
+function shorten(text, max) {
+  const s = String(text ?? '').trim()
+  if (s.length <= max) return s
+  const cut = s.slice(0, max)
+  const lastSpace = cut.lastIndexOf(' ')
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…'
+}
+
 const startsWithAny = (line, list) => list.some((s) => line.startsWith(s))
 const includesAny = (line, list) => list.some((s) => line.includes(s))
 
@@ -91,13 +103,13 @@ function detectAsset(line, screen) {
     const u = urls[0]
     if (/youtube|youtu\.be|vimeo|\.mp4|\.webm/i.test(u))
       return { id: id('vid'), kind: 'video', url: u, consumesLine: true,
-               hint: line.replace(u, '').trim().slice(0, 160) || 'סרטון מהמסמך' }
+               hint: shorten(line.replace(u, ''), 200) || 'סרטון מהמסמך' }
     if (/\.mp3|\.m4a|\.wav|\.ogg/i.test(u))
       return { id: id('aud'), kind: 'audio', url: u, consumesLine: true,
-               hint: line.replace(u, '').trim().slice(0, 160) || 'קובץ שמע מהמסמך' }
+               hint: shorten(line.replace(u, ''), 200) || 'קובץ שמע מהמסמך' }
   }
 
-  const hint = line.replace(/^[^:]{0,40}:\s*/, '').slice(0, 220)
+  const hint = shorten(line.replace(/^[^:]{0,40}:\s*/, ''), 260)
   if (IMAGE_HINTS.some((re) => re.test(line)))
     return { id: id('img'), kind: 'image', hint, consumesLine: true }
   if (AUDIO_HINTS.some((re) => re.test(line)))
@@ -112,7 +124,7 @@ export function parseUnit(nodes) {
 
   // כותרת המסמך: הפסקה הראשונה שאינה סימון מסך
   const firstText = nodes.find((n) => n.kind === 'p' && !SCREEN_RE.test(n.text))
-  doc.title = firstText?.text.slice(0, 90) ?? 'יחידה מיובאת'
+  doc.title = shorten(firstText?.text, 90) || 'יחידה מיובאת'
 
   // חיתוך לפי מסכים
   const chunks = []
@@ -285,7 +297,7 @@ function parseScreen(chunk, order) {
         }
         if (s.startsWith('למקור') || s.startsWith('קישור למאמר')) {
           src.url = findUrls(s)[0] ?? ''
-          if (!src.publisher) src.publisher = afterColon(s).slice(0, 80)
+          if (!src.publisher) src.publisher = shorten(afterColon(s), 80)
           break
         }
         if (/^מקור\s*\d*$/.test(s) || SCREEN_RE.test(s)) { j--; break }
@@ -376,12 +388,12 @@ function finalizeActivity(a, screen) {
     if (a.options.length < 2) {
       a.needsReview = true
       screen.warnings.push(
-        `לפעילות "${(a.prompt || 'ללא ניסוח').slice(0, 40)}" לא זוהו מספיק אפשרויות תשובה.`,
+        `לפעילות "${shorten(a.prompt || 'ללא ניסוח', 40)}" לא זוהו מספיק אפשרויות תשובה.`,
       )
     } else if (a.qtype !== 'poll' && !a.options.some((o) => o.correct)) {
       a.needsReview = true
       screen.warnings.push(
-        `לפעילות "${(a.prompt || 'ללא ניסוח').slice(0, 40)}" לא סומנה תשובה נכונה.`,
+        `לפעילות "${shorten(a.prompt || 'ללא ניסוח', 40)}" לא סומנה תשובה נכונה.`,
       )
     }
   }
