@@ -1215,6 +1215,308 @@ textarea {
   font-weight: 700;
 }
 
+/* ───────── מיון לקבוצות ───────── */
+.sort-block {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+.sort-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-content: flex-start;
+  padding: 9px;
+  min-height: 52px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+}
+.sort-groups {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 10px;
+}
+.sort-group {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.sort-group.droppable {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.sort-group-head {
+  padding: 8px 11px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sort-group-head strong {
+  font-size: 15px;
+}
+.sort-group-body {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+.sort-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 14px;
+  cursor: grab;
+  transition: border-color 0.13s, background 0.13s;
+}
+.sort-card:hover {
+  border-color: var(--brand);
+}
+.sort-card.held {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: var(--shadow-md);
+}
+.sort-card.right {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sort-card.wrong {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.sort-card > span {
+  flex: 1;
+}
+.sort-remove {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 14px;
+  padding: 0 2px;
+}
+.sort-remove:hover {
+  color: var(--ink);
+}
+
+/* ───────── שאלה פתוחה ───────── */
+.open-block {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.open-input {
+  flex: 1;
+  min-height: 60px;
+  resize: none;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.open-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+/* ───────── תיבה מסומנת ───────── */
+.callout {
+  height: 100%;
+  padding: 14px 18px;
+  border-radius: var(--r-md);
+  border-inline-start: 5px solid var(--tone, var(--brand));
+  background: color-mix(in srgb, var(--tone, var(--brand)) 8%, #fff);
+  overflow: auto;
+}
+.callout-label {
+  display: inline-block;
+  margin-bottom: 7px;
+  padding: 2px 12px;
+  border-radius: var(--r-pill);
+  background: var(--tone, var(--brand));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.callout-text {
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+/* ───────── כרטיס כלי ───────── */
+.tool-card {
+  height: 100%;
+  padding: 16px 20px;
+  border: 2px solid var(--brand);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: auto;
+}
+.tool-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+.tool-head strong {
+  font-size: 19px;
+  color: var(--brand-dark);
+}
+.tool-badge {
+  padding: 2px 11px;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.tool-intro {
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.tool-steps {
+  margin: 0;
+  padding-inline-start: 22px;
+  line-height: 1.9;
+}
+
+/* ───────── כרטיס מקור ───────── */
+.source-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 17px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.source-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.source-head strong {
+  font-size: 15px;
+}
+.source-icon {
+  font-size: 17px;
+}
+.source-tag {
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+.source-excerpt {
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.source-link {
+  margin-top: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ───────── משוב אחרי בדיקה ───────── */
+.q-feedback {
+  margin-top: 12px;
+  padding: 11px 15px;
+  border-radius: var(--r-sm);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.q-feedback.ok {
+  background: var(--accent-soft);
+  border-inline-start: 4px solid var(--accent);
+}
+.q-feedback.no {
+  background: #fdf3dc;
+  border-inline-start: 4px solid var(--warn);
+}
+.q-feedback p {
+  margin: 0;
+}
+.q-feedback p + p {
+  margin-top: 6px;
+}
+
+.cloze-select {
+  width: auto;
+  min-width: 120px;
+  padding: 4px 9px;
+  border: 0;
+  border-bottom: 2px solid var(--brand);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: var(--brand-soft);
+  font: inherit;
+  font-size: 16px;
+}
+.cloze-chip.select {
+  background: var(--accent);
+}
+
+/* עורכי התוכן */
+.opt-block {
+  margin-bottom: 10px;
+}
+.opt-block .opt-row {
+  margin-bottom: 4px;
+}
+.opt-feedback {
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+}
+.group-num {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cert-answer.open {
+  border-inline-start-color: var(--brand);
+}
+.cert-answer .open-text {
+  white-space: pre-wrap;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
 /* כפתור הבדיקה */
 .check-bar {
   display: flex;

@@ -14,7 +14,14 @@ import CanvasBlock from '../components/CanvasBlock'
 import StaticBlock from '../components/StaticBlock'
 import BlockEditor from '../components/BlockEditor'
 import { ElementRibbon, DefaultRibbon } from '../components/Ribbon'
-import { SideRail, TextPanel, QuestionPanel, MediaPanel, SlidesPanel } from '../components/SideRail'
+import {
+  SideRail,
+  TextPanel,
+  QuestionPanel,
+  MediaPanel,
+  CardsPanel,
+  SlidesPanel,
+} from '../components/SideRail'
 
 const MODES = [
   { key: 'edit', label: '✏️ עריכה' },
@@ -330,6 +337,7 @@ export default function Editor() {
             {railTab === 'text' && <TextPanel onAdd={addBlock} />}
             {railTab === 'questions' && <QuestionPanel onAdd={addBlock} />}
             {railTab === 'video' && <MediaPanel onAdd={addBlock} />}
+            {railTab === 'cards' && <CardsPanel onAdd={addBlock} />}
             {railTab === 'images' && profile && (
               <MediaLibrary ownerUid={profile.id} media={media} setMedia={setMedia} />
             )}

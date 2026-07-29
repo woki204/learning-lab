@@ -1,4 +1,4 @@
-import { TEXT_INSERTS, QUESTION_INSERTS, MEDIA_INSERTS } from '../lib/blocks'
+import { TEXT_INSERTS, QUESTION_INSERTS, MEDIA_INSERTS, CARD_INSERTS } from '../lib/blocks'
 import { VARIANTS } from '../lib/typography'
 
 /**
@@ -9,6 +9,7 @@ export const RAIL_TABS = [
   { key: 'text', icon: 'T', label: 'טקסט' },
   { key: 'images', icon: '🖼', label: 'תמונות' },
   { key: 'video', icon: '🎬', label: 'וידאו' },
+  { key: 'cards', icon: '💬', label: 'כרטיסים' },
   { key: 'questions', icon: '❓', label: 'שאלות' },
   { key: 'slides', icon: '▦', label: 'שלבים' },
 ]
@@ -78,6 +79,29 @@ export function QuestionPanel({ onAdd }) {
       <p className="panel-foot tiny muted">
         השאלות נכללות אוטומטית בציון ובתעודה. הוסף <strong>כפתור בדיקה</strong> לשלב
         כדי שהלומד יוכל לבדוק את עצמו כבר שם.
+      </p>
+    </>
+  )
+}
+
+/** פאנל הכרטיסים — תיבות מסומנות, כרטיס כלי וכרטיס מקור */
+export function CardsPanel({ onAdd }) {
+  return (
+    <>
+      <div className="panel-head">
+        <strong>תיבות וכרטיסים</strong>
+      </div>
+      <div className="panel-body">
+        {CARD_INSERTS.map((item) => (
+          <button key={item.key} className="text-preset" onClick={() => onAdd(item)}>
+            <span>{item.label}</span>
+            <span className="ins-badge">{item.badge}</span>
+          </button>
+        ))}
+      </div>
+      <p className="panel-foot tiny muted">
+        התיבות המסומנות נערכות בלחיצה כפולה עליהן. את הגוון ואת הכיתוב על התג
+        משנים בסרגל העליון.
       </p>
     </>
   )

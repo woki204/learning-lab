@@ -66,6 +66,18 @@ export default function Certificate({ course, learnerName, result, onRestart }) 
           </div>
         )}
 
+        {result.responses?.length > 0 && (
+          <div className="cert-answers">
+            <h3>התשובות הפתוחות שלך</h3>
+            {result.responses.map((r, i) => (
+              <div key={i} className="cert-answer open">
+                <div className="q">{r.question || '(שאלה)'}</div>
+                <div className="a open-text">{r.answerText}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="cert-foot">
           <span>תאריך: {today}</span>
           <span>מס' תעודה: {serial}</span>

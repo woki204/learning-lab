@@ -74,6 +74,8 @@ export default function CanvasBlock({
     drag.current = null
   }
 
+  // אילו רכיבים נערכים בכתיבה ישירה על הבמה, ובאיזה שדה
+  const inlineField = { text: 'content', callout: 'text' }[block.type] ?? null
   const isText = block.type === 'text'
   const tb = isText ? normalizeTextBlock(block) : block
 
@@ -89,23 +91,23 @@ export default function CanvasBlock({
       onPointerCancel={endDrag}
       onDoubleClick={(e) => {
         e.stopPropagation()
-        if (isText) onStartEdit()
+        if (inlineField) onStartEdit()
       }}
     >
       <div className="cblock-inner" style={boxCss(tb.box)} dir="rtl">
-        {isText && editing ? (
+        {inlineField && editing ? (
           <textarea
             ref={taRef}
             className="cblock-textarea"
-            value={tb.content}
-            onChange={(e) => onChange({ ...tb, content: e.target.value })}
+            value={tb[inlineField] ?? ''}
+            onChange={(e) => onChange({ ...tb, [inlineField]: e.target.value })}
             onPointerDown={(e) => e.stopPropagation()}
             onBlur={onEndEdit}
             onKeyDown={(e) => {
               if (e.key === 'Escape') onEndEdit()
               e.stopPropagation()
             }}
-            style={textCss(tb.style)}
+            style={isText ? textCss(tb.style) : undefined}
           />
         ) : (
           <div className="cblock-content">

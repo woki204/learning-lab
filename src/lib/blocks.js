@@ -25,25 +25,66 @@ const norm = (s) =>
     .replace(/[.,;:!?"'׳״]/g, '')
     .toLowerCase()
 
-/** מפרק תבנית השלמה לקטעי טקסט ולחסרים. חסר נכתב כ-[[תשובה|חלופה]] */
+/**
+ * מפרק תבנית השלמה לקטעי טקסט ולחסרים. שני סוגי חסרים:
+ *   [[תשובה|חלופה]]     – הלומד מקליד. כל אחת מהחלופות מתקבלת.
+ *                          [[]] ריק = כל תשובה שאינה ריקה מתקבלת.
+ *   {{דומה|*שונה}}      – הלומד בוחר מרשימה נפתחת. הכוכבית מסמנת
+ *                          את הנכונה; בלי כוכבית הראשונה היא הנכונה.
+ */
 export function parseCloze(template = '') {
   const parts = []
-  const re = /\[\[(.*?)\]\]/g
+  const re = /\[\[(.*?)\]\]|\{\{(.*?)\}\}/g
   let last = 0
   let m
   let blankIndex = 0
   while ((m = re.exec(template)) !== null) {
     if (m.index > last) parts.push({ kind: 'text', text: template.slice(last, m.index) })
-    const answers = m[1]
-      .split('|')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    parts.push({ kind: 'blank', index: blankIndex++, answers })
+
+    if (m[2] !== undefined) {
+      const raw = m[2].split('|').map((s) => s.trim()).filter(Boolean)
+      const starred = raw.findIndex((s) => s.startsWith('*'))
+      const options = raw.map((s) => s.replace(/^\*/, ''))
+      parts.push({
+        kind: 'select',
+        index: blankIndex++,
+        options,
+        correct: options[starred >= 0 ? starred : 0] ?? '',
+      })
+    } else {
+      const answers = m[1].split('|').map((s) => s.trim()).filter(Boolean)
+      parts.push({ kind: 'blank', index: blankIndex++, answers })
+    }
     last = m.index + m[0].length
   }
   if (last < template.length) parts.push({ kind: 'text', text: template.slice(last) })
   return parts
 }
+
+export const clozeBlanks = (template) =>
+  parseCloze(template).filter((p) => p.kind === 'blank' || p.kind === 'select')
+
+/** האם החסר נענה נכון */
+export function clozeBlankCorrect(part, given) {
+  if (part.kind === 'select') return norm(given) === norm(part.correct) && String(given ?? '') !== ''
+  if (part.answers.length === 0) return !!String(given ?? '').trim()
+  return part.answers.some((a) => norm(a) === norm(given))
+}
+
+/** שדות המשוב המשותפים לכל רכיב שנבדק */
+const feedbackFields = () => ({ okFeedback: '', noFeedback: '' })
+
+/** גוני התיבות המסומנות שחוזרות ביחידות: הידעת, טיפ, גוף ידע וכו' */
+export const CALLOUT_TONES = {
+  info: { label: 'הידעת', defaultLabel: 'הידעת?!', color: '#0b7285' },
+  tip: { label: 'טיפ', defaultLabel: 'טיפ לחוקר ולמבקר', color: '#b45309' },
+  knowledge: { label: 'גוף ידע', defaultLabel: 'גוף ידע', color: '#3d5afe' },
+  tool: { label: 'כלי חדש', defaultLabel: 'כלי חדש', color: '#7c3aed' },
+  glossary: { label: 'מילה חמה', defaultLabel: 'מילה חמה', color: '#be185d' },
+  note: { label: 'שימו לב', defaultLabel: 'שימו לב', color: '#0a8f72' },
+}
+
+export const calloutToneList = Object.entries(CALLOUT_TONES).map(([key, t]) => ({ key, ...t }))
 
 export const BLOCK_TYPES = {
   text: {
@@ -97,12 +138,19 @@ export const BLOCK_TYPES = {
       display: 'list', // list = רשימה, cards = כרטיסים עם תמונות
       columns: 2, // רלוונטי לתצוגת כרטיסים
       options: [
-        { id: newId(), text: '', mediaId: null },
-        { id: newId(), text: '', mediaId: null },
+        { id: newId(), text: '', mediaId: null, feedback: '' },
+        { id: newId(), text: '', mediaId: null, feedback: '' },
       ],
       correctId: null,
       points: 1,
       explanation: '',
+      poll: false, // סקר עמדה: כל בחירה מתקבלת, בלי נכון ושגוי
+      ...feedbackFields(),
+    }),
+    // סקר עמדה אינו מנוקד כלל — הבחירה נאספת לתעודה בלבד
+    collectAnswer: (block, answer) => ({
+      question: block.prompt,
+      answerText: block.options.find((o) => o.id === answer)?.text ?? '— לא נענה —',
     }),
     grade: (block, answer) => {
       const chosen = block.options.find((o) => o.id === answer)
@@ -134,6 +182,7 @@ export const BLOCK_TYPES = {
       points: 2,
       partial: true, // ניקוד חלקי לפי כמה סומנו נכון
       explanation: '',
+      ...feedbackFields(),
     }),
     grade: (block, answer) => {
       const picked = Array.isArray(answer) ? answer : []
@@ -174,36 +223,133 @@ export const BLOCK_TYPES = {
       template: 'אני צריך/ה עזרה ב[[]] על [[]].',
       points: 2,
       explanation: '',
+      ...feedbackFields(),
     }),
     grade: (block, answer) => {
       const filled = answer ?? {}
-      const blanks = parseCloze(block.template).filter((p) => p.kind === 'blank')
+      const blanks = clozeBlanks(block.template)
       const max = block.points || 1
       if (blanks.length === 0)
         return { correct: true, points: max, max, question: block.template, answerText: '' }
 
-      let hits = 0
-      blanks.forEach((b) => {
-        const given = filled[b.index]
-        // חסר בלי תשובות מוגדרות נבדק רק על כך שמולא
-        if (b.answers.length === 0) {
-          if (String(given ?? '').trim()) hits += 1
-        } else if (b.answers.some((a) => norm(a) === norm(given))) hits += 1
-      })
-
+      const hits = blanks.filter((b) => clozeBlankCorrect(b, filled[b.index])).length
       const points = (hits / blanks.length) * max
+
       return {
         correct: hits === blanks.length,
         points: Math.round(points * 100) / 100,
         max,
-        question: block.template.replace(/\[\[(.*?)\]\]/g, '____'),
-        answerText:
-          blanks.map((b) => filled[b.index] || '—').join(' | ') || '— לא נענה —',
+        question: block.template.replace(/\[\[(.*?)\]\]|\{\{(.*?)\}\}/g, '____'),
+        answerText: blanks.map((b) => filled[b.index] || '—').join(' | ') || '— לא נענה —',
         correctText: blanks
-          .map((b) => (b.answers.length ? b.answers[0] : 'תשובה חופשית'))
+          .map((b) => (b.kind === 'select' ? b.correct : b.answers.length ? b.answers[0] : 'תשובה חופשית'))
           .join(' | '),
       }
     },
+  },
+
+  sort: {
+    label: 'מיון לקבוצות',
+    icon: '🗂',
+    gradable: true,
+    create: () => ({
+      id: newId(),
+      type: 'sort',
+      prompt: '',
+      groups: [
+        { id: newId(), label: 'קבוצה א', description: '' },
+        { id: newId(), label: 'קבוצה ב', description: '' },
+      ],
+      cards: [],
+      points: 4,
+      explanation: '',
+      ...feedbackFields(),
+    }),
+    grade: (block, answer) => {
+      const placed = answer ?? {}
+      const cards = block.cards ?? []
+      const max = block.points || 1
+      if (cards.length === 0)
+        return { correct: true, points: max, max, question: block.prompt, answerText: '' }
+
+      const hits = cards.filter((c) => placed[c.id] && placed[c.id] === c.groupId).length
+      const points = (hits / cards.length) * max
+      const groupLabel = (gid) => block.groups.find((g) => g.id === gid)?.label ?? '—'
+
+      return {
+        correct: hits === cards.length,
+        points: Math.round(points * 100) / 100,
+        max,
+        question: block.prompt,
+        answerText:
+          cards
+            .filter((c) => placed[c.id])
+            .map((c) => `${c.text} ← ${groupLabel(placed[c.id])}`)
+            .join(' · ') || '— לא מוין —',
+        correctText: cards.map((c) => `${c.text} ← ${groupLabel(c.groupId)}`).join(' · '),
+      }
+    },
+  },
+
+  open: {
+    label: 'שאלה פתוחה',
+    icon: '🖊',
+    gradable: false,
+    collect: true, // לא מנוקד, אך התשובה נכנסת לתעודה
+    create: () => ({
+      id: newId(),
+      type: 'open',
+      prompt: '',
+      placeholder: 'כתבו כאן את התשובה שלכם…',
+      rows: 4,
+      afterText: '',
+    }),
+    collectAnswer: (block, answer) => ({
+      question: block.prompt,
+      answerText: String(answer ?? '').trim() || '— לא נענה —',
+    }),
+  },
+
+  callout: {
+    label: 'תיבה מסומנת',
+    icon: '💬',
+    gradable: false,
+    create: (tone = 'info') => ({
+      id: newId(),
+      type: 'callout',
+      tone,
+      label: CALLOUT_TONES[tone]?.defaultLabel ?? '',
+      text: '',
+    }),
+  },
+
+  tool: {
+    label: 'כרטיס כלי',
+    icon: '🧭',
+    gradable: false,
+    create: () => ({
+      id: newId(),
+      type: 'tool',
+      name: '',
+      intro: 'מה עושים בעזרת הכלי?',
+      steps: ['', ''],
+    }),
+  },
+
+  source: {
+    label: 'כרטיס מקור',
+    icon: '📰',
+    gradable: false,
+    create: () => ({
+      id: newId(),
+      type: 'source',
+      publisher: '',
+      translated: false,
+      adapted: false,
+      excerpt: '',
+      url: '',
+      linkText: 'למקור המלא',
+    }),
   },
 
   check: {
@@ -246,6 +392,8 @@ export const QUESTION_INSERTS = [
   insert('question', '❓', 'שאלה אמריקאית', () => BLOCK_TYPES.question.create()),
   insert('multi', '☑️', 'בחירה מרובה', () => BLOCK_TYPES.multi.create()),
   insert('cloze', '✍️', 'השלמת מילים', () => BLOCK_TYPES.cloze.create()),
+  insert('sort', '🗂', 'מיון לקבוצות', () => BLOCK_TYPES.sort.create()),
+  insert('open', '🖊', 'שאלה פתוחה', () => BLOCK_TYPES.open.create()),
   insert('check', '✅', 'כפתור בדיקה', () => BLOCK_TYPES.check.create()),
 ]
 
@@ -253,7 +401,20 @@ export const MEDIA_INSERTS = [
   insert('video', '🎬', 'וידאו', () => BLOCK_TYPES.video.create()),
 ]
 
-export const INSERT_MENU = [...TEXT_INSERTS, ...QUESTION_INSERTS, ...MEDIA_INSERTS]
+export const CARD_INSERTS = [
+  ...calloutToneList.map((t) =>
+    insert(`callout:${t.key}`, '💬', t.defaultLabel, () => BLOCK_TYPES.callout.create(t.key)),
+  ),
+  insert('tool', '🧭', 'כרטיס כלי', () => BLOCK_TYPES.tool.create()),
+  insert('source', '📰', 'כרטיס מקור', () => BLOCK_TYPES.source.create()),
+]
+
+export const INSERT_MENU = [
+  ...TEXT_INSERTS,
+  ...QUESTION_INSERTS,
+  ...MEDIA_INSERTS,
+  ...CARD_INSERTS,
+]
 
 export const createSlide = (index = 0) => ({
   id: newId(),
@@ -270,25 +431,44 @@ export const createCourse = () => ({
   slides: [createSlide(0)],
 })
 
-/** מחשב ציון לרשימת רכיבים אחת — משמש גם שלב בודד וגם את כל הסביבה */
+/**
+ * מחשב ציון לרשימת רכיבים אחת — משמש גם שלב בודד וגם את כל הסביבה.
+ * responses אוסף תשובות שאינן מנוקדות (שאלה פתוחה) עבור התעודה.
+ */
 export function gradeBlocks(blocks = [], answers = {}) {
   const details = []
+  const responses = []
   let earned = 0
   let max = 0
+
   blocks.forEach((block) => {
     const def = BLOCK_TYPES[block.type]
-    if (!def?.gradable) return
-    const result = def.grade(block, answers[block.id])
-    earned += result.points
-    max += result.max
-    details.push({ ...result, blockId: block.id })
+    if (!def) return
+    // סקר עמדה מוגדר כשאלה, אך אין לו תשובה נכונה ולכן אינו מנוקד
+    const graded = def.gradable && !block.poll
+    if (graded) {
+      const result = def.grade(block, answers[block.id])
+      earned += result.points
+      max += result.max
+      details.push({ ...result, blockId: block.id })
+    } else if (def.collectAnswer) {
+      responses.push({ ...def.collectAnswer(block, answers[block.id]), blockId: block.id })
+    }
   })
-  return { details, earned, max, score: max > 0 ? Math.round((earned / max) * 100) : 100 }
+
+  return {
+    details,
+    responses,
+    earned,
+    max,
+    score: max > 0 ? Math.round((earned / max) * 100) : 100,
+  }
 }
 
 // עובר על כל השקופיות, מחשב ציון ומחזיר פירוט לתעודה
 export function gradeCourse(course, answers) {
   const details = []
+  const responses = []
   let earned = 0
   let max = 0
 
@@ -297,8 +477,9 @@ export function gradeCourse(course, answers) {
     earned += r.earned
     max += r.max
     r.details.forEach((d) => details.push({ ...d, slideIndex: si, slideTitle: slide.title }))
+    r.responses.forEach((d) => responses.push({ ...d, slideIndex: si, slideTitle: slide.title }))
   })
 
   const score = max > 0 ? Math.round((earned / max) * 100) : 100
-  return { details, earned, max, score, passed: score >= (course.passScore ?? 60) }
+  return { details, responses, earned, max, score, passed: score >= (course.passScore ?? 60) }
 }

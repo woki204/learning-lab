@@ -7,6 +7,7 @@ import {
   defaultStyle,
   defaultBox,
 } from '../lib/typography'
+import { CALLOUT_TONES, calloutToneList } from '../lib/blocks'
 import { AlignIcon, DirIcon } from './icons'
 import Popover from './Popover'
 
@@ -88,6 +89,43 @@ export function ElementRibbon({ block, onChange, onRestack, onDuplicate, onDelet
           <span className="tb-label">✍️ השלמת מילים</span>
           <button className="btn sm" onClick={onEditContent}>✏️ ערוך תבנית</button>
           <span className="tiny muted">{block.points ?? 1} נק'</span>
+        </>
+      )}
+
+      {block.type === 'sort' && (
+        <>
+          <span className="tb-label">🗂 מיון לקבוצות</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך קבוצות וכרטיסים</button>
+          <span className="tiny muted">
+            {block.groups?.length ?? 0} קבוצות · {block.cards?.length ?? 0} כרטיסים ·{' '}
+            {block.points ?? 1} נק'
+          </span>
+        </>
+      )}
+
+      {block.type === 'open' && (
+        <>
+          <span className="tb-label">🖊 שאלה פתוחה</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <span className="tiny muted">לא מנוקדת · נכנסת לתעודה</span>
+        </>
+      )}
+
+      {block.type === 'callout' && <CalloutTools block={block} onChange={onChange} />}
+
+      {block.type === 'tool' && (
+        <>
+          <span className="tb-label">🧭 כרטיס כלי</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <span className="tiny muted">{block.steps?.filter((s) => s.trim()).length ?? 0} צעדים</span>
+        </>
+      )}
+
+      {block.type === 'source' && (
+        <>
+          <span className="tb-label">📰 כרטיס מקור</span>
+          <button className="btn sm" onClick={onEditContent}>✏️ ערוך תוכן</button>
+          <span className="tiny muted">{block.publisher || 'ללא גוף מפרסם'}</span>
         </>
       )}
 
@@ -298,6 +336,44 @@ function VideoTools({ block, onChange }) {
         onChange={(e) => onChange({ ...block, url: e.target.value })}
       />
       <BoxPopover block={block} onChange={onChange} />
+    </>
+  )
+}
+
+function CalloutTools({ block, onChange }) {
+  return (
+    <>
+      <span className="tb-label">💬 תיבה</span>
+      <select
+        className="tb-select"
+        style={{ width: 128 }}
+        value={block.tone ?? 'info'}
+        onChange={(e) =>
+          onChange({
+            ...block,
+            tone: e.target.value,
+            // אם הכיתוב עדיין ברירת המחדל של הגוון הקודם, מעדכנים אותו
+            label:
+              calloutToneList.some((t) => t.defaultLabel === block.label) || !block.label
+                ? CALLOUT_TONES[e.target.value].defaultLabel
+                : block.label,
+          })
+        }
+        title="סוג התיבה"
+      >
+        {calloutToneList.map((t) => (
+          <option key={t.key} value={t.key}>{t.label}</option>
+        ))}
+      </select>
+      <input
+        className="tb-input"
+        style={{ width: 170 }}
+        type="text"
+        value={block.label ?? ''}
+        placeholder="הכיתוב על התג"
+        onChange={(e) => onChange({ ...block, label: e.target.value })}
+      />
+      <span className="tiny muted">את הטקסט כותבים בלחיצה כפולה על התיבה</span>
     </>
   )
 }
