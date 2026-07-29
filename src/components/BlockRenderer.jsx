@@ -324,7 +324,8 @@ function MatchView({ block }) {
                 }
                 onClick={() => interactive && !checked && setPick(pick === p.id ? null : p.id)}
               >
-                <span className="match-num">{numOf(p.id)}</span>
+                {/* המספר מופיע רק אחרי שנוצרה התאמה, אחרת נראה כאילו כבר נענה */}
+                {linked[p.id] && <span className="match-num">{numOf(p.id)}</span>}
                 <span>{p.left}</span>
                 {state && <Mark state={state} />}
               </button>
